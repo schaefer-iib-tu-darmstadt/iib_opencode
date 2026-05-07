@@ -1,0 +1,7 @@
+# Fork-owned files: on `git merge upstream/dev`, always keep our version.
+# Requires a one-time per-clone setup so git knows what `merge=ours` means:
+#     git config merge.ours.driver true
+# Without that line, git falls back to a normal merge and you'll see conflicts
+# on these paths whenever upstream edits them. See CLAUDE.md for context.
+README.md                    merge=ours
+docs/upstream-readme/**      merge=ours

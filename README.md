@@ -1,141 +1,168 @@
-<p align="center">
-  <a href="https://opencode.ai">
-    <picture>
-      <source srcset="packages/console/app/src/asset/logo-ornate-dark.svg" media="(prefers-color-scheme: dark)">
-      <source srcset="packages/console/app/src/asset/logo-ornate-light.svg" media="(prefers-color-scheme: light)">
-      <img src="packages/console/app/src/asset/logo-ornate-light.svg" alt="OpenCode logo">
-    </picture>
-  </a>
-</p>
-<p align="center">The open source AI coding agent.</p>
-<p align="center">
-  <a href="https://opencode.ai/discord"><img alt="Discord" src="https://img.shields.io/discord/1391832426048651334?style=flat-square&label=discord" /></a>
-  <a href="https://www.npmjs.com/package/opencode-ai"><img alt="npm" src="https://img.shields.io/npm/v/opencode-ai?style=flat-square" /></a>
-  <a href="https://github.com/anomalyco/opencode/actions/workflows/publish.yml"><img alt="Build status" src="https://img.shields.io/github/actions/workflow/status/anomalyco/opencode/publish.yml?style=flat-square&branch=dev" /></a>
-</p>
+# iibcode — fork of [sst/opencode](https://github.com/sst/opencode)
 
-<p align="center">
-  <a href="README.md">English</a> |
-  <a href="README.zh.md">简体中文</a> |
-  <a href="README.zht.md">繁體中文</a> |
-  <a href="README.ko.md">한국어</a> |
-  <a href="README.de.md">Deutsch</a> |
-  <a href="README.es.md">Español</a> |
-  <a href="README.fr.md">Français</a> |
-  <a href="README.it.md">Italiano</a> |
-  <a href="README.da.md">Dansk</a> |
-  <a href="README.ja.md">日本語</a> |
-  <a href="README.pl.md">Polski</a> |
-  <a href="README.ru.md">Русский</a> |
-  <a href="README.bs.md">Bosanski</a> |
-  <a href="README.ar.md">العربية</a> |
-  <a href="README.no.md">Norsk</a> |
-  <a href="README.br.md">Português (Brasil)</a> |
-  <a href="README.th.md">ไทย</a> |
-  <a href="README.tr.md">Türkçe</a> |
-  <a href="README.uk.md">Українська</a> |
-  <a href="README.bn.md">বাংলা</a> |
-  <a href="README.gr.md">Ελληνικά</a> |
-  <a href="README.vi.md">Tiếng Việt</a>
-</p>
+A personal fork of OpenCode wired up to use the **GWDG Chat AI** and **TUDaGPT** university LLM gateways with open-weight models (Qwen3-Coder, Devstral, GLM, Mistral Large, etc.) instead of frontier closed models.
 
-[![OpenCode Terminal UI](packages/web/src/assets/lander/screenshot.png)](https://opencode.ai)
+The idea: Claude Code-style interactive coding agent, but powered by models hosted on TU/GWDG infrastructure, fully open-source, no external API costs.
 
----
+> Looking for the upstream OpenCode README (English + 21 translations)? See [`docs/upstream-readme/`](docs/upstream-readme/).
 
-### Installation
+## What's customized
 
-```bash
-# YOLO
-curl -fsSL https://opencode.ai/install | bash
+| | |
+|---|---|
+| `opencode.json` | Adds the `gwdg` provider (and later `tudagpt`) using `@ai-sdk/openai-compatible` |
+| `README.md` (this file), `CLAUDE.md` | Fork-specific docs (quickstart + Claude Code context) |
+| Everything else | Untouched upstream — pulls cleanly from `sst/opencode` |
 
-# Package managers
-npm i -g opencode-ai@latest        # or bun/pnpm/yarn
-scoop install opencode             # Windows
-choco install opencode             # Windows
-brew install anomalyco/tap/opencode # macOS and Linux (recommended, always up to date)
-brew install opencode              # macOS and Linux (official brew formula, updated less)
-sudo pacman -S opencode            # Arch Linux (Stable)
-paru -S opencode-bin               # Arch Linux (Latest from AUR)
-mise use -g opencode               # Any OS
-nix run nixpkgs#opencode           # or github:anomalyco/opencode for latest dev branch
+## Quick start
+
+### Prerequisites
+
+- **Bun** ≥ 1.3 — `irm https://bun.com/install.ps1 | iex` (Windows) or see [bun.sh](https://bun.sh)
+- **Git**
+- A **GWDG API key** — book one at the [KISSKI LLM Service page](https://kisski.gwdg.de/leistungen/2-02-llm-service/)
+- (optional) A **TUDaGPT API key** from TU Darmstadt HRZ — only works on the TU network
+
+### Setup
+
+```powershell
+git clone <this-repo>
+cd iib_opencode
+bun install --ignore-scripts   # see "Known issues" below for why --ignore-scripts
+[Environment]::SetEnvironmentVariable("GWDG_API_KEY", "your-key-here", "User")
+# open a fresh shell so the env var is picked up
 ```
 
-> [!TIP]
-> Remove versions older than 0.1.x before installing.
+The `GWDG_API_KEY` is referenced in `opencode.json` as `{env:GWDG_API_KEY}` and resolved at runtime — the key itself is never committed.
 
-### Desktop App (BETA)
+### Verify it works
 
-OpenCode is also available as a desktop application. Download directly from the [releases page](https://github.com/anomalyco/opencode/releases) or [opencode.ai/download](https://opencode.ai/download).
-
-| Platform              | Download                           |
-| --------------------- | ---------------------------------- |
-| macOS (Apple Silicon) | `opencode-desktop-mac-arm64.dmg`   |
-| macOS (Intel)         | `opencode-desktop-mac-x64.dmg`     |
-| Windows               | `opencode-desktop-windows-x64.exe` |
-| Linux                 | `.deb`, `.rpm`, or `.AppImage`     |
-
-```bash
-# macOS (Homebrew)
-brew install --cask opencode-desktop
-# Windows (Scoop)
-scoop bucket add extras; scoop install extras/opencode-desktop
+```powershell
+bun dev models gwdg              # lists configured GWDG models
+bun dev run --dir . "Reply with the single word PONG" -m gwdg/qwen3-coder-30b-a3b-instruct
+bun run gwdg:refresh             # re-probe model list & tool-call support against the live API
 ```
 
-#### Installation Directory
+### Run the interactive TUI (dev mode)
 
-The install script respects the following priority order for the installation path:
-
-1. `$OPENCODE_INSTALL_DIR` - Custom installation directory
-2. `$XDG_BIN_DIR` - XDG Base Directory Specification compliant path
-3. `$HOME/bin` - Standard user binary directory (if it exists or can be created)
-4. `$HOME/.opencode/bin` - Default fallback
-
-```bash
-# Examples
-OPENCODE_INSTALL_DIR=/usr/local/bin curl -fsSL https://opencode.ai/install | bash
-XDG_BIN_DIR=$HOME/.local/bin curl -fsSL https://opencode.ai/install | bash
+```powershell
+bun dev                          # launches OpenCode TUI from source
 ```
 
-### Agents
+`bun dev` runs straight from source — no build step — but inherits the `--cwd packages/opencode` gotcha (see Known issues). Fine for testing changes you make to the fork, **not** good for daily coding work in real projects. For that, build a real binary:
 
-OpenCode includes two built-in agents you can switch between with the `Tab` key.
+### Build & install the `iibcode` binary
 
-- **build** - Default, full-access agent for development work
-- **plan** - Read-only agent for analysis and code exploration
-  - Denies file edits by default
-  - Asks permission before running bash commands
-  - Ideal for exploring unfamiliar codebases or planning changes
+```powershell
+bun run iibcode:build                # produces dist/iibcode.exe (~150 MB), takes 1–3 min
+```
 
-Also included is a **general** subagent for complex searches and multistep tasks.
-This is used internally and can be invoked using `@general` in messages.
+Then put it on your PATH. The simplest spot is the bun bin folder, which is already on PATH from the bun install:
 
-Learn more about [agents](https://opencode.ai/docs/agents).
+```powershell
+Copy-Item dist\iibcode.exe "$env:USERPROFILE\.bun\bin\iibcode.exe"
+iibcode --version                # verify it runs from any folder
+```
 
-### Documentation
+(macOS/Linux: `cp dist/iibcode ~/.bun/bin/iibcode` or `sudo cp dist/iibcode /usr/local/bin/iibcode`.)
 
-For more info on how to configure OpenCode, [**head over to our docs**](https://opencode.ai/docs).
+**One more step — make `iibcode` find the GWDG provider config from anywhere.** Drop a copy of `opencode.json` into the global opencode config dir so the `gwdg/...` models are visible no matter what folder you launch from. The location follows the XDG Base Directory spec; on Windows opencode uses `~/.config/opencode/` (not `%APPDATA%`):
 
-### Contributing
+```powershell
+$cfgDir = "$env:USERPROFILE\.config\opencode"
+New-Item -ItemType Directory -Force -Path $cfgDir | Out-Null
+Copy-Item opencode.json "$cfgDir\opencode.json"
+```
 
-If you're interested in contributing to OpenCode, please read our [contributing docs](./CONTRIBUTING.md) before submitting a pull request.
+(macOS/Linux: `mkdir -p ~/.config/opencode && cp opencode.json ~/.config/opencode/opencode.json`.)
 
-### Building on OpenCode
+Now `iibcode` works in any directory and `/models` inside the TUI lists all 21 GWDG models.
 
-If you are working on a project that's related to OpenCode and is using "opencode" as part of its name, for example "opencode-dashboard" or "opencode-mobile", please add a note to your README to clarify that it is not built by the OpenCode team and is not affiliated with us in any way.
+#### Do I need to rebuild after editing the fork?
 
-### FAQ
+| What you changed | Rebuild needed? |
+|---|---|
+| `opencode.json` (model list, providers, limits) | **No** — read at runtime. Just edit and re-run `iibcode`. If you edited the global copy, that takes effect immediately too. |
+| `scripts/*` (build, gwdg-refresh, etc.) | No — these are dev-time scripts, not bundled. |
+| `packages/opencode/src/**` (TUI, tool dispatch, providers, anything in the source tree) | **Yes** — re-run `bun run iibcode:build` and copy the new `dist/iibcode.exe` over. |
+| Just iterating quickly on source changes? | Skip the rebuild loop entirely — use `bun dev` (runs from source) until happy, then build once. |
 
-#### How is this different from Claude Code?
+**Rebuild quickstart** — run from the **repo root** (`iib_opencode/`):
 
-It's very similar to Claude Code in terms of capability. Here are the key differences:
+```powershell
+bun run iibcode:build                                                      # produces dist/iibcode.exe
+Copy-Item dist\iibcode.exe "$env:USERPROFILE\.bun\bin\iibcode.exe" -Force   # overwrite the on-PATH binary
+iibcode --version                                                          # sanity check
+```
 
-- 100% open source
-- Not coupled to any provider. Although we recommend the models we provide through [OpenCode Zen](https://opencode.ai/zen), OpenCode can be used with Claude, OpenAI, Google, or even local models. As models evolve, the gaps between them will close and pricing will drop, so being provider-agnostic is important.
-- Built-in opt-in LSP support
-- A focus on TUI. OpenCode is built by neovim users and the creators of [terminal.shop](https://terminal.shop); we are going to push the limits of what's possible in the terminal.
-- A client/server architecture. This, for example, can allow OpenCode to run on your computer while you drive it remotely from a mobile app, meaning that the TUI frontend is just one of the possible clients.
+`bun run iibcode:build` MUST run from the repo root, not from `packages/opencode/`. The script (`scripts/build-iibcode.ts`) handles `cd`'ing into the right place internally and renames the output binary to `iibcode`. If you run `bun run build` from inside `packages/opencode/` you'll get an `opencode.exe` in `packages/opencode/dist/...` but nothing on PATH gets updated — that's the trap.
 
----
+After every `bun run iibcode:build`, the build will dirty `bun.lock` and `packages/opencode/package.json` with line-ending changes on Windows. Don't commit those — `git checkout -- bun.lock packages/opencode/package.json` resets them.
 
-**Join our community** [Discord](https://discord.gg/opencode) | [X.com](https://x.com/opencode)
+## Available models
+
+Configured in [`opencode.json`](opencode.json). All currently exposed via the `gwdg/` provider prefix. Ground-truthed against the live API on 2026-05-07 (re-run `bun run gwdg:refresh` to update).
+
+### Tool-capable (13) — usable for agentic flows
+
+- `qwen3-coder-30b-a3b-instruct` — **recommended default** for coding tasks (256k context)
+- `qwen3.5-397b-a17b` — flagship Qwen, thinking/reasoning
+- `qwen3.5-122b-a10b` — large Qwen, thinking
+- `qwen3.5-35b-a3b` — mid Qwen, thinking
+- `qwen3.5-27b` — small Qwen, thinking
+- `qwen3.6-35b-a3b` — newer Qwen
+- `qwen3-30b-a3b-instruct-2507` — older Qwen3 instruct
+- `mistral-large-3-675b-instruct-2512` — flagship Mistral
+- `devstral-2-123b-instruct-2512` — Mistral's coding-tuned model
+- `glm-4.7` — strong on agentic tasks
+- `openai-gpt-oss-120b` — OpenAI's open weights
+- `llama-3.3-70b-instruct` — Meta's flagship
+- `meta-llama-3.1-8b-instruct` — small Llama (fast smoke tests)
+
+### Listed but no tool calling on GWDG today (8) — non-agentic only
+
+These return HTTP 400 when sent a `tools` array. The cause is a server-side vLLM config gap (`--enable-auto-tool-choice` not set), not a model capability gap — they may light up if GWDG re-deploys them. Configured `tool_call: false` in `opencode.json`.
+
+- `apertus-70b-instruct-2509`
+- `qwen3-omni-30b-a3b-instruct` — also broken for plain chat (chat template error)
+- `internvl3.5-30b-a3b` — vision + video
+- `gemma-4-31b-it`, `gemma-3-27b-it`
+- `medgemma-27b-it` — high demand (queues)
+- `deepseek-r1-distill-llama-70b` — thinking
+- `teuken-7b-instruct-research` — research-only
+
+Full GWDG catalog: `GET https://chat-ai.academiccloud.de/v1/models` with `Authorization: Bearer $GWDG_API_KEY`.
+
+## Pulling upstream updates
+
+The fork is set up so `git pull` from `sst/opencode` never conflicts with our customizations.
+
+```bash
+git fetch upstream
+git merge upstream/dev          # or rebase, your call
+```
+
+If you've created your own GitHub fork and want to push:
+
+```bash
+git remote add origin https://github.com/<you>/opencode.git
+git push -u origin dev
+```
+
+## Known issues
+
+### `bun install` fails on Windows without Visual Studio
+
+`tree-sitter-powershell` needs node-gyp + a C++ compiler. Workaround: install with `--ignore-scripts`. Loses PowerShell syntax highlighting in the TUI; nothing else.
+
+### `bun dev` thinks the project root is `packages/opencode`
+
+The `dev` script in root `package.json` has `--cwd packages/opencode`. So when you run `bun dev run "..."`, OpenCode treats that subdirectory as the project. Workaround: pass `--dir <project-path>` to the `run` subcommand. The interactive TUI (`bun dev` with no args) inherits the same wrong cwd; for real use, build the binary and run from the actual project directory.
+
+### 8 GWDG-served models don't currently expose tool calling
+
+A vLLM-side server config gap on the GWDG deployment of these models — `--enable-auto-tool-choice` and `--tool-call-parser` aren't set, so any request with a `tools` array returns HTTP 400. They're configured `tool_call: false` in `opencode.json`, which means OpenCode won't expose its built-in tools to them and they can't drive agentic flows. They still work for plain chat. Re-run `bun run gwdg:refresh` if GWDG enables tool calling on more models.
+
+## License
+
+OpenCode is MIT-licensed. This fork remains MIT.
