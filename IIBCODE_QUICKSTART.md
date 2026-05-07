@@ -1,4 +1,4 @@
-# IIB Agent CLI — fork of [sst/opencode](https://github.com/sst/opencode)
+# iibcode — fork of [sst/opencode](https://github.com/sst/opencode)
 
 A personal fork of OpenCode wired up to use the **GWDG Chat AI** and **TUDaGPT** university LLM gateways with open-weight models (Qwen3-Coder, Devstral, GLM, Mistral Large, etc.) instead of frontier closed models.
 
@@ -9,7 +9,7 @@ The idea: Claude Code-style interactive coding agent, but powered by models host
 | | |
 |---|---|
 | `opencode.json` | Adds the `gwdg` provider (and later `tudagpt`) using `@ai-sdk/openai-compatible` |
-| `IIB_QUICKSTART.md`, `CLAUDE.md` | Fork-specific docs (this file + Claude Code context) |
+| `IIBCODE_QUICKSTART.md`, `CLAUDE.md` | Fork-specific docs (this file + Claude Code context) |
 | Everything else | Untouched upstream — pulls cleanly from `sst/opencode` |
 
 ## Quick start
@@ -52,7 +52,7 @@ bun dev                          # launches OpenCode TUI from source
 ### Build & install the `iibcode` binary
 
 ```powershell
-bun run iib:build                # produces dist/iibcode.exe (~150 MB), takes 1–3 min
+bun run iibcode:build                # produces dist/iibcode.exe (~150 MB), takes 1–3 min
 ```
 
 Then put it on your PATH. The simplest spot is the bun bin folder, which is already on PATH from the bun install:
@@ -82,10 +82,10 @@ Now `iibcode` works in any directory and `/models` inside the TUI lists all 21 G
 |---|---|
 | `opencode.json` (model list, providers, limits) | **No** — read at runtime. Just edit and re-run `iibcode`. If you edited the global copy, that takes effect immediately too. |
 | `scripts/*` (build, gwdg-refresh, etc.) | No — these are dev-time scripts, not bundled. |
-| `packages/opencode/src/**` (TUI, tool dispatch, providers, anything in the source tree) | **Yes** — re-run `bun run iib:build` and copy the new `dist/iibcode.exe` over. |
+| `packages/opencode/src/**` (TUI, tool dispatch, providers, anything in the source tree) | **Yes** — re-run `bun run iibcode:build` and copy the new `dist/iibcode.exe` over. |
 | Just iterating quickly on source changes? | Skip the rebuild loop entirely — use `bun dev` (runs from source) until happy, then build once. |
 
-After every `bun run iib:build`, the build will dirty `bun.lock` and `packages/opencode/package.json` with line-ending changes on Windows. Don't commit those — `git checkout -- bun.lock packages/opencode/package.json` resets them.
+After every `bun run iibcode:build`, the build will dirty `bun.lock` and `packages/opencode/package.json` with line-ending changes on Windows. Don't commit those — `git checkout -- bun.lock packages/opencode/package.json` resets them.
 
 ## Available models
 

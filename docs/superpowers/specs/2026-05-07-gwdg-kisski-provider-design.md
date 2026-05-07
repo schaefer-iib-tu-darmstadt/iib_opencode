@@ -3,7 +3,7 @@
 **Status:** Approved through brainstorming; ready for implementation planning
 **Date:** 2026-05-07
 **Author:** Claude (Opus 4.7) + Nils
-**Repo:** `iib_opencode` (fork of `sst/opencode`)
+**Repo:** `iibcode` (fork of `sst/opencode`; cloned into `iib_opencode/` on Nils' machine)
 
 ---
 
@@ -67,7 +67,7 @@ Tool-call probe results (each model sent `tools=[get_weather]`, `tool_choice=aut
 
 ### Existing fork state
 
-- The repo already contains `CLAUDE.md` and `IIB_QUICKSTART.md` describing the *intended* GWDG integration, but no code or config has actually been committed.
+- The repo already contains `CLAUDE.md` and `IIBCODE_QUICKSTART.md` describing the *intended* GWDG integration, but no code or config has actually been committed.
 - The root `opencode.json` is currently gitignored (`.gitignore:20`).
 - A separate file `.opencode/opencode.jsonc` is tracked, has empty `"provider": {}`, and is heavily modified upstream — **not** the right hook point for our customizations.
 - No `upstream` git remote is configured. Adding it is out of scope for this task.
@@ -83,7 +83,7 @@ Tool-call probe results (each model sent `tools=[get_weather]`, `tool_choice=aut
 | Context limits | Conservative defaults baked in | GWDG doesn't expose actual limits; users override per-model in global config when they hit real caps. |
 | Cost fields | Omitted | KISSKI is tier-billed, not per-token. |
 | Refresh tooling | PowerShell script that prints to stdout | Windows-native, ~50 LOC, no new runtime deps; manual diff/merge keeps a human in the loop and avoids JSONC comment loss. |
-| Doc updates | Fix stale claims in `CLAUDE.md` and `IIB_QUICKSTART.md` | Probe surfaced concrete drift (POST vs GET, fabricated-name worry, missing tool-call notes). |
+| Doc updates | Fix stale claims in `CLAUDE.md` and `IIBCODE_QUICKSTART.md` | Probe surfaced concrete drift (POST vs GET, fabricated-name worry, missing tool-call notes). |
 
 ## Files changed
 
@@ -94,7 +94,7 @@ Tool-call probe results (each model sent `tools=[get_weather]`, `tool_choice=aut
 | `scripts/gwdg-refresh-models.ps1` | New | Re-queries `/v1/models` + tool-call probe; emits refreshed `provider.gwdg.models` JSON to stdout |
 | `package.json` (repo root) | Edit | Add `"gwdg:refresh": "pwsh -File scripts/gwdg-refresh-models.ps1"` script alias |
 | `CLAUDE.md` | Edit | Fix POST→GET on `/v1/models`; refresh "verified working" date and content |
-| `IIB_QUICKSTART.md` | Edit | Refresh model list; group by tool-call capability; note the 8 non-agentic models; add `bun run gwdg:refresh` instruction |
+| `IIBCODE_QUICKSTART.md` | Edit | Refresh model list; group by tool-call capability; note the 8 non-agentic models; add `bun run gwdg:refresh` instruction |
 
 **Out of scope:** `packages/opencode/src/**` (no source changes), `.opencode/opencode.jsonc` (upstream-managed).
 
@@ -303,7 +303,7 @@ Add one entry to root `package.json`:
 | PowerShell sanity-check snippet | `-Method Post` → `-Method Get` |
 | "Verified working as of 2026-05-03" block | Update date to `2026-05-07`; expand the body to: "13 of 21 GWDG-served models return well-formed OpenAI tool calls (probed live). 8 fail with a vLLM-side `--enable-auto-tool-choice` error and are configured `tool_call: false` in `opencode.json`. Run `bun run gwdg:refresh` to re-probe." |
 
-### `IIB_QUICKSTART.md`
+### `IIBCODE_QUICKSTART.md`
 
 | Area | Change |
 |---|---|

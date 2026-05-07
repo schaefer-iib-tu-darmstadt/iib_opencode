@@ -23,7 +23,7 @@ param()
 $ErrorActionPreference = "Stop"
 
 if ([string]::IsNullOrEmpty($env:GWDG_API_KEY)) {
-  Write-Error "GWDG_API_KEY env var is not set. See IIB_QUICKSTART.md for setup."
+  Write-Error "GWDG_API_KEY env var is not set. See IIBCODE_QUICKSTART.md for setup."
   exit 1
 }
 

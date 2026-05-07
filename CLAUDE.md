@@ -1,6 +1,6 @@
 # Claude Code context for this repo
 
-You are working in a **personal fork of [sst/opencode](https://github.com/sst/opencode)** that's customized to talk to GWDG Chat AI and TUDaGPT (university LLM gateways serving open-weight models). See `IIB_QUICKSTART.md` for user-facing docs.
+You are working in a **personal fork of [sst/opencode](https://github.com/sst/opencode)** that's customized to talk to GWDG Chat AI and TUDaGPT (university LLM gateways serving open-weight models). The customized CLI is branded `iibcode`. See `IIBCODE_QUICKSTART.md` for user-facing docs.
 
 ## What this repo is
 
@@ -15,7 +15,7 @@ You are working in a **personal fork of [sst/opencode](https://github.com/sst/op
 1. **Don't modify upstream files unless absolutely necessary.** Every file we edit becomes a merge conflict on `git pull upstream`. Prefer config-only changes via `opencode.json`. If you must touch source, do it in a clearly-named branch and document why.
 2. **Never push to `upstream`.** That's `sst/opencode`. Pushes go to `origin` (the user's fork) only.
 3. **Never commit secrets.** `GWDG_API_KEY` lives in the User-scope env var on Windows, referenced as `{env:GWDG_API_KEY}` in `opencode.json`. Don't inline it.
-4. **Don't run `bun install` without `--ignore-scripts` on Windows** unless Visual Studio C++ Build Tools are installed (see "Known issues" in IIB_QUICKSTART.md). It will fail building `tree-sitter-powershell`.
+4. **Don't run `bun install` without `--ignore-scripts` on Windows** unless Visual Studio C++ Build Tools are installed (see "Known issues" in IIBCODE_QUICKSTART.md). It will fail building `tree-sitter-powershell`.
 
 ## Key paths
 

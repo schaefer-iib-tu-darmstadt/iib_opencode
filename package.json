@@ -19,7 +19,7 @@
     "hello": "echo 'Hello World!'",
     "test": "echo 'do not run tests from root' && exit 1",
     "gwdg:refresh": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/gwdg-refresh-models.ps1",
-    "iib:build": "bun run scripts/build-iibcode.ts"
+    "iibcode:build": "bun run scripts/build-iibcode.ts"
   },
   "workspaces": {
     "packages": [

@@ -3,8 +3,8 @@
 // build-iibcode.ts
 //
 // Builds a single-platform binary of this opencode fork and renames it to
-// "iibcode" so anyone who clones the repo can run `bun run iib:build` and get
-// a drop-in CLI.
+// "iibcode" so anyone who clones the repo can run `bun run iibcode:build` and
+// get a drop-in CLI.
 //
 // Why a wrapper script and not a `pkg.name` rename in packages/opencode/package.json?
 // -> Golden rule #1 in CLAUDE.md: don't modify upstream files. Renaming in
