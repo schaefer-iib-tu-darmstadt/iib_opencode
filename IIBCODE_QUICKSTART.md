@@ -85,6 +85,16 @@ Now `iibcode` works in any directory and `/models` inside the TUI lists all 21 G
 | `packages/opencode/src/**` (TUI, tool dispatch, providers, anything in the source tree) | **Yes** — re-run `bun run iibcode:build` and copy the new `dist/iibcode.exe` over. |
 | Just iterating quickly on source changes? | Skip the rebuild loop entirely — use `bun dev` (runs from source) until happy, then build once. |
 
+**Rebuild quickstart** — run from the **repo root** (`iib_opencode/`):
+
+```powershell
+bun run iibcode:build                                                      # produces dist/iibcode.exe
+Copy-Item dist\iibcode.exe "$env:USERPROFILE\.bun\bin\iibcode.exe" -Force   # overwrite the on-PATH binary
+iibcode --version                                                          # sanity check
+```
+
+`bun run iibcode:build` MUST run from the repo root, not from `packages/opencode/`. The script (`scripts/build-iibcode.ts`) handles `cd`'ing into the right place internally and renames the output binary to `iibcode`. If you run `bun run build` from inside `packages/opencode/` you'll get an `opencode.exe` in `packages/opencode/dist/...` but nothing on PATH gets updated — that's the trap.
+
 After every `bun run iibcode:build`, the build will dirty `bun.lock` and `packages/opencode/package.json` with line-ending changes on Windows. Don't commit those — `git checkout -- bun.lock packages/opencode/package.json` resets them.
 
 ## Available models
