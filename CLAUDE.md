@@ -1,6 +1,6 @@
 # Claude Code context for this repo
 
-You are working in a **personal fork of [sst/opencode](https://github.com/sst/opencode)** that's customized to talk to GWDG Chat AI and TUDaGPT (university LLM gateways serving open-weight models). See `FORK.md` for user-facing docs.
+You are working in a **personal fork of [sst/opencode](https://github.com/sst/opencode)** that's customized to talk to GWDG Chat AI and TUDaGPT (university LLM gateways serving open-weight models). See `IIB_QUICKSTART.md` for user-facing docs.
 
 ## What this repo is
 
@@ -15,7 +15,7 @@ You are working in a **personal fork of [sst/opencode](https://github.com/sst/op
 1. **Don't modify upstream files unless absolutely necessary.** Every file we edit becomes a merge conflict on `git pull upstream`. Prefer config-only changes via `opencode.json`. If you must touch source, do it in a clearly-named branch and document why.
 2. **Never push to `upstream`.** That's `sst/opencode`. Pushes go to `origin` (the user's fork) only.
 3. **Never commit secrets.** `GWDG_API_KEY` lives in the User-scope env var on Windows, referenced as `{env:GWDG_API_KEY}` in `opencode.json`. Don't inline it.
-4. **Don't run `bun install` without `--ignore-scripts` on Windows** unless Visual Studio C++ Build Tools are installed (see "Known issues" in FORK.md). It will fail building `tree-sitter-powershell`.
+4. **Don't run `bun install` without `--ignore-scripts` on Windows** unless Visual Studio C++ Build Tools are installed (see "Known issues" in IIB_QUICKSTART.md). It will fail building `tree-sitter-powershell`.
 
 ## Key paths
 
@@ -35,7 +35,7 @@ You are working in a **personal fork of [sst/opencode](https://github.com/sst/op
 - **API key:** `GWDG_API_KEY` — User-scope env var. Set once with `[Environment]::SetEnvironmentVariable("GWDG_API_KEY", "...", "User")`. After setting, **new** shells inherit it; existing ones (including a running Claude Code instance) do not — restart Claude Code if its bash tool can't see it.
 - **Bun:** `C:\Users\Nils\.bun\bin\bun.exe` on PATH.
 - **Endpoints:**
-  - GWDG: `https://chat-ai.academiccloud.de/v1` — OpenAI-compatible, `Authorization: Bearer $GWDG_API_KEY`. Note: `/v1/models` requires **POST**, not GET.
+  - GWDG: `https://chat-ai.academiccloud.de/v1` — OpenAI-compatible, `Authorization: Bearer $GWDG_API_KEY`. Note: `/v1/models` is a standard **GET** (the OpenAI `/v1/models` endpoint).
   - TUDaGPT: TU-network only, base URL TBD (ask HRZ).
 
 ## Common commands
@@ -55,7 +55,10 @@ git fetch upstream && git merge upstream/dev
 
 # Test GWDG endpoint directly (PowerShell)
 $h = @{ Authorization = "Bearer $env:GWDG_API_KEY"; "Content-Type" = "application/json" }
-Invoke-RestMethod -Uri "https://chat-ai.academiccloud.de/v1/models" -Method Post -Headers $h
+Invoke-RestMethod -Uri "https://chat-ai.academiccloud.de/v1/models" -Method Get -Headers $h
+
+# Re-probe the model list and tool-call support
+bun run gwdg:refresh
 ```
 
 ## Known gotchas
@@ -64,11 +67,13 @@ Invoke-RestMethod -Uri "https://chat-ai.academiccloud.de/v1/models" -Method Post
 2. **Models can hallucinate counts** even when tools return correct results (Qwen3-Coder reported "31" matches when glob said 41). For numeric aggregations, prefer to surface the tool's reported count rather than ask the model to count from a list.
 3. **`bun install` needs `--ignore-scripts`** on this Windows setup (no VS C++ tooling). Already noted, just don't forget on a fresh clone.
 
-## Verified working as of 2026-05-03
+## Verified working as of 2026-05-07
 
 - GWDG API key valid (32 hex chars).
-- `gwdg/qwen3-coder-30b-a3b-instruct` returns properly-formatted OpenAI tool calls — no parser workarounds needed.
-- End-to-end: model → tool call → result → reply loop works.
+- `GET /v1/models` returns 21 live models (all `status: ready`).
+- 13 of 21 GWDG-served models return well-formed OpenAI tool calls (probed live). 8 fail with a vLLM-side `--enable-auto-tool-choice` server-config error and are configured `tool_call: false` in `opencode.json`.
+- `gwdg/qwen3-coder-30b-a3b-instruct` is the recommended default for agentic use — fast, tool-capable, coding-tuned.
+- Run `bun run gwdg:refresh` to re-probe (handy when GWDG enables tool calling on more deployments).
 
 ## Tasks that are still TODO
 
