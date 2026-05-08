@@ -215,6 +215,30 @@ error: Fail extracting tarball for "@ibm/plex"
 
 The `dev` script in root `package.json` has `--cwd packages/opencode`. So when you run `bun dev run "..."`, OpenCode treats that subdirectory as the project. Workaround: pass `--dir <project-path>` to the `run` subcommand. The interactive TUI (`bun dev` with no args) inherits the same wrong cwd; for real use, build the binary and run from the actual project directory.
 
+### `git push` pre-push hook fails on `packages/enterprise/src/custom-elements.d.ts`
+
+The pre-push hook runs `bun turbo typecheck` across the whole monorepo. On Windows, it'll fail with:
+
+```
+@opencode-ai/enterprise:typecheck:
+  src/custom-elements.d.ts(1,1): error TS1128: Declaration or statement expected.
+husky - pre-push script failed (code 2)
+```
+
+**Cause:** that file is a git symlink (mode `120000`) pointing to `../../ui/src/custom-elements.d.ts`. Without `core.symlinks=true`, git checks it out as a 33-byte text file containing the literal path string, which TypeScript can't parse. Enabling `core.symlinks` on Windows additionally requires **Developer Mode** (`Settings → System → For developers → Developer Mode`) or admin privileges, since regular users can't create symlinks.
+
+**Workarounds, in order of preference:**
+
+1. **Enable Developer Mode**, then once per clone:
+   ```bash
+   git config core.symlinks true
+   git checkout -- packages/enterprise/src/custom-elements.d.ts
+   ```
+   Persistent fix; the typecheck then passes.
+2. **Bypass the hook** for a single push: `git push --no-verify`. Reasonable when your changes are confined to `packages/opencode/` (which we don't ship the enterprise package from anyway), but you lose the local typecheck on your own changes too — run `bun turbo typecheck --filter=opencode` first to keep that safety net.
+
+We don't build or use the `@opencode-ai/enterprise` package in this fork, so the failure is purely a checkout-format problem, not a code problem.
+
 ### 8 GWDG-served models don't currently expose tool calling
 
 A vLLM-side server config gap on the GWDG deployment of these models — `--enable-auto-tool-choice` and `--tool-call-parser` aren't set, so any request with a `tools` array returns HTTP 400. They're configured `tool_call: false` in `opencode.json`, which means OpenCode won't expose its built-in tools to them and they can't drive agentic flows. They still work for plain chat. Re-run `bun run gwdg:refresh` if GWDG enables tool calling on more models.
