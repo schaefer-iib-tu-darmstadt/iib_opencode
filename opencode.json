@@ -1,10 +1,11 @@
 {
   "$schema": "https://opencode.ai/config.json",
   "autoupdate": false,
+  "enabled_providers": ["gwdg"],
   "provider": {
     "gwdg": {
       "npm": "@ai-sdk/openai-compatible",
-      "name": "GWDG Chat AI (KISSKI)",
+      "name": "GWDG ChatAI",
       "options": {
         "baseURL": "https://chat-ai.academiccloud.de/v1",
         "apiKey": "{env:GWDG_API_KEY}"
@@ -86,48 +87,48 @@
           "limit": { "context": 128000, "output": 8192 }
         },
         "apertus-70b-instruct-2509": {
-          "name": "Apertus 70B Instruct 2509 (no tool calling on GWDG)",
+          "name": "Apertus 70B Instruct 2509 (no tools)",
           "tool_call": false,
           "limit": { "context": 128000, "output": 8192 }
         },
         "qwen3-omni-30b-a3b-instruct": {
-          "name": "Qwen3 Omni 30B A3B Instruct (broken: chat template error)",
+          "name": "Qwen3 Omni 30B A3B Instruct (broken)",
           "tool_call": false,
           "attachment": true,
           "limit": { "context": 128000, "output": 8192 }
         },
         "internvl3.5-30b-a3b": {
-          "name": "InternVL 3.5 30B A3B (no tool calling on GWDG)",
+          "name": "InternVL 3.5 30B A3B (no tools)",
           "tool_call": false,
           "attachment": true,
           "limit": { "context": 128000, "output": 8192 }
         },
         "gemma-4-31b-it": {
-          "name": "Gemma 4 31B IT (no tool calling on GWDG)",
+          "name": "Gemma 4 31B IT (no tools)",
           "tool_call": false,
           "attachment": true,
           "limit": { "context": 128000, "output": 8192 }
         },
         "gemma-3-27b-it": {
-          "name": "Gemma 3 27B IT (no tool calling on GWDG)",
+          "name": "Gemma 3 27B IT (no tools)",
           "tool_call": false,
           "attachment": true,
           "limit": { "context": 128000, "output": 8192 }
         },
         "medgemma-27b-it": {
-          "name": "MedGemma 27B IT (no tool calling on GWDG; high demand)",
+          "name": "MedGemma 27B IT (no tools, busy)",
           "tool_call": false,
           "attachment": true,
           "limit": { "context": 128000, "output": 8192 }
         },
         "deepseek-r1-distill-llama-70b": {
-          "name": "DeepSeek R1 Distill Llama 70B (no tool calling on GWDG; thinking)",
+          "name": "DeepSeek R1 Distill Llama 70B (no tools, thinking)",
           "tool_call": false,
           "reasoning": true,
           "limit": { "context": 128000, "output": 8192 }
         },
         "teuken-7b-instruct-research": {
-          "name": "Teuken 7B Instruct (research, no tool calling on GWDG)",
+          "name": "Teuken 7B Instruct (research, no tools)",
           "tool_call": false,
           "limit": { "context": 4096, "output": 2048 }
         }
