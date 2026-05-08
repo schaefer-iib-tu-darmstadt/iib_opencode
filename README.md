@@ -1,8 +1,6 @@
 # iibcode
 
-A coding agent that runs on TU/GWDG infrastructure — not on closed frontier APIs.
-
-iibcode is a personal fork of [anomalyco/opencode](https://github.com/anomalyco/opencode) wired up to the **GWDG ChatAI** and **TUDaGPT** university LLM gateways. Same Claude Code-style interactive TUI, powered by open-weight models (Qwen3-Coder, Devstral, GLM, Mistral Large, …) hosted on university infrastructure. No external API costs, no data leaving the university network.
+An open-source coding agent that runs on open-weight foundation models provided by **GWDG ChatAI** or **TUDaGPT**. Claude Code / Codex / Aider-style interactive TUI — free for academic use, prompts and code stay on university infrastructure. Personal/experimental fork of [opencode](https://github.com/anomalyco/opencode); model list and config will drift, breaking changes likely.
 
 <p align="center">
   <img src="docs/images/iibcode.png" width="800" alt="iibcode TUI running against the GWDG API">
@@ -12,7 +10,7 @@ iibcode is a personal fork of [anomalyco/opencode](https://github.com/anomalyco/
 
 - **Bun** ≥ 1.3 — `irm https://bun.com/install.ps1 | iex` on Windows, or see [bun.sh](https://bun.sh)
 - **Git**
-- A **GWDG API key** — request one at the [KISSKI LLM Service page](https://kisski.gwdg.de/leistungen/2-02-llm-service/)
+- A **GWDG API key** — request one at the [KISSKI LLM Service page](https://kisski.gwdg.de/leistungen/2-02-llm-service/) (German academic affiliation required; allow ~1 week for approval)
 - *(optional)* A **TUDaGPT API key** from TU Darmstadt HRZ — only works on the TU network
 
 ## Setup
@@ -63,7 +61,7 @@ iibcode run "explain the auth flow" -m gwdg/qwen3-coder-30b-a3b-instruct  # one-
 
 ---
 
-## Available models
+## Available models (early May 2026 — GWDG)
 
 Configured in [`opencode.json`](opencode.json), all under the `gwdg/` provider prefix. Ground-truthed against the live API on 2026-05-07 — re-run `bun run gwdg:refresh` to update.
 
@@ -99,15 +97,24 @@ Full GWDG catalog: `GET https://chat-ai.academiccloud.de/v1/models` with `Author
 
 ## Updating from upstream OpenCode
 
-GitLab has no equivalent of GitHub's "Sync fork" button for cross-host upstreams. The `upstream` remote is preconfigured to point at `anomalyco/opencode`, so syncing is three commands from the repo root:
+GitLab has no equivalent of GitHub's "Sync fork" button for cross-host upstreams. Sync via the command line.
+
+**First time per clone (one-off):**
+
+```bash
+git remote add upstream https://github.com/anomalyco/opencode.git    # link to upstream
+git config merge.ours.driver true                                    # enable the merge=ours driver for our docs
+```
+
+**Each sync:**
 
 ```bash
 git fetch upstream
 git merge upstream/dev          # or rebase, your call
-git push origin dev             # publish the merged history to GitLab
+git push origin dev             # publish to GitLab
 ```
 
-The `merge=ours` driver auto-keeps our `README.md` and `docs/upstream-readme/` on conflict (one-time per clone: `git config merge.ours.driver true`). If upstream adds a new translation file (e.g. `README.cs.md`) it'll appear at the repo root after merge — move it: `git mv README.cs.md docs/upstream-readme/`. The `merge=ours` rule only fires for *existing* paths, so brand-new files slip through.
+The `merge=ours` driver auto-keeps our `README.md` and `docs/upstream-readme/` on conflict. If upstream adds a new translation file (e.g. `README.cs.md`) it'll appear at the repo root after merge — move it: `git mv README.cs.md docs/upstream-readme/`. The rule only fires for *existing* paths, so brand-new files slip through.
 
 ## Developer workflow
 
@@ -162,6 +169,13 @@ Updates `opencode.json` with the current model list and tool-call support flags.
 | Everything else | Untouched upstream — pulls cleanly from `anomalyco/opencode` |
 
 The original upstream OpenCode README (English + 21 translations) lives in [`docs/upstream-readme/`](docs/upstream-readme/).
+
+## Roadmap / where help is welcome
+
+- **TUDaGPT** as a second provider once the base URL and auth are available
+- Per-model `limit.context` / `limit.output` tuning in `opencode.json` (currently conservative 128k guesses)
+- Trim the default tool set for smaller open-weight models that get confused by 15+ tools
+- Qwen-tuned system prompt bound via opencode's agent config
 
 ## Known issues
 
@@ -255,4 +269,4 @@ A vLLM-side server config gap on the GWDG deployment of these models — `--enab
 
 ## License
 
-OpenCode is MIT-licensed. This fork remains MIT.
+iibcode, a fork of OpenCode remains MIT-licensed.
