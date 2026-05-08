@@ -6,9 +6,10 @@ You are working in a **personal fork of [anomalyco/opencode](https://github.com/
 
 - A clone of `anomalyco/opencode` (a TypeScript/Bun coding-agent CLI/TUI), with a project-local `opencode.json` adding `@ai-sdk/openai-compatible` providers for **GWDG** (and eventually TUDaGPT).
 - Default branch: **`dev`** (upstream's default — not `main`).
-- Two git remotes:
+- Git remotes:
   - `upstream` → `https://github.com/anomalyco/opencode.git` (anomalyco, read-only for us)
-  - `origin` → `https://github.com/schaefer-iib-tu-darmstadt/iibcode.git` (user's fork)
+  - `origin` → `https://git-ce.rwth-aachen.de/tuda-iib/iibai/iibcode.git` (RWTH GitLab, the active fork host)
+  - `old-origin` → `https://github.com/schaefer-iib-tu-darmstadt/iibcode.git` (former GitHub fork, kept as backup; safe to remove with `git remote remove old-origin`)
 
 ## Golden rules when working here
 
@@ -66,7 +67,7 @@ bun run gwdg:refresh
 
 ## Known gotchas
 
-1. **`bun dev` forces cwd to `packages/opencode`** because the root `dev` script does `bun run --cwd packages/opencode src/index.ts`. This means OpenCode treats that subdirectory as the project root. For one-shot `run`, override with `--dir <path>`. For TUI usage, build a binary (`cd packages/opencode && bun run build`) and run that from your actual project directory.
+1. **`bun dev` forces cwd to `packages/opencode`** because the root `dev` script does `bun run --cwd packages/opencode src/index.ts`. This means OpenCode treats that subdirectory as the project root. For one-shot `run`, override with `--dir <path>`. For TUI usage, build a binary with `bun run iibcode:build` (from the repo root, **not** `packages/opencode/`) and run that from your actual project directory. See README → "Build the `iibcode` binary".
 2. **Models can hallucinate counts** even when tools return correct results (Qwen3-Coder reported "31" matches when glob said 41). For numeric aggregations, prefer to surface the tool's reported count rather than ask the model to count from a list.
 3. **`bun install` needs `--ignore-scripts`** on this Windows setup (no VS C++ tooling). Already noted, just don't forget on a fresh clone.
 4. **`merge=ours` driver needs one-time per-clone setup.** `.gitattributes` marks `README.md` and `docs/upstream-readme/**` as `merge=ours` so `git merge upstream/dev` auto-keeps our version on those paths. The driver itself is not committed; on every fresh clone run once: `git config merge.ours.driver true`. Without it, you'll get normal merge conflicts on the README during upstream syncs (resolution is still trivial: `git checkout --ours README.md docs/upstream-readme/`).
@@ -84,6 +85,5 @@ bun run gwdg:refresh
 
 - Wire up TUDaGPT as a second provider once the base URL and auth are available.
 - Tune `limit.context` and `limit.output` per model in `opencode.json` (currently mostly conservative 128k guesses).
-- Build a release binary so the TUI can be launched from any project directory cleanly.
 - Consider trimming OpenCode's default tool set (15+ tools) for smaller open-weight models that get confused by too many options. Hook: `packages/opencode/src/tool/registry.ts`.
 - Write a Qwen-tuned system prompt and bind it via OpenCode's agent config.

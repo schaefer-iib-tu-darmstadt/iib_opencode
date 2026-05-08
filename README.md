@@ -1,76 +1,47 @@
+# iibcode
+
+A coding agent that runs on TU/GWDG infrastructure — not on closed frontier APIs.
+
+iibcode is a personal fork of [anomalyco/opencode](https://github.com/anomalyco/opencode) wired up to the **GWDG ChatAI** and **TUDaGPT** university LLM gateways. Same Claude Code-style interactive TUI, powered by open-weight models (Qwen3-Coder, Devstral, GLM, Mistral Large, …) hosted on university infrastructure. No external API costs, no data leaving the university network.
+
 <p align="center">
-  <img src="docs/images/iibcode.png" width="800" alt="iibcode startup with GWDG API">
+  <img src="docs/images/iibcode.png" width="800" alt="iibcode TUI running against the GWDG API">
 </p>
 
-# iibcode — fork of [anomalyco/opencode](https://github.com/anomalyco/opencode)
+## Prerequisites
 
-A personal fork of OpenCode wired up to use the **GWDG ChatAI** and **TUDaGPT** university LLM gateways with open-weight models (Qwen3-Coder, Devstral, GLM, Mistral Large, etc.) instead of frontier closed models.
-
-The idea: Claude Code-style interactive coding agent, but powered by models hosted on TU/GWDG infrastructure, fully open-source, no external API costs.
-
-> Looking for the upstream OpenCode README (English + 21 translations)? See [`docs/upstream-readme/`](docs/upstream-readme/).
-
-## What's customized
-
-| | |
-|---|---|
-| `opencode.json` | Adds the `gwdg` provider (and later `tudagpt`) using `@ai-sdk/openai-compatible` |
-| `README.md` (this file), `CLAUDE.md` | Fork-specific docs (quickstart + Claude Code context) |
-| Everything else | Untouched upstream — pulls cleanly from `anomalyco/opencode` |
-
-## Quick start
-
-### Prerequisites
-
-- **Bun** ≥ 1.3 — `irm https://bun.com/install.ps1 | iex` (Windows) or see [bun.sh](https://bun.sh)
+- **Bun** ≥ 1.3 — `irm https://bun.com/install.ps1 | iex` on Windows, or see [bun.sh](https://bun.sh)
 - **Git**
-- A **GWDG API key** — book one at the [KISSKI LLM Service page](https://kisski.gwdg.de/leistungen/2-02-llm-service/)
-- (optional) A **TUDaGPT API key** from TU Darmstadt HRZ — only works on the TU network
+- A **GWDG API key** — request one at the [KISSKI LLM Service page](https://kisski.gwdg.de/leistungen/2-02-llm-service/)
+- *(optional)* A **TUDaGPT API key** from TU Darmstadt HRZ — only works on the TU network
 
-### Setup
+## Setup
+
+Clone, install dependencies, store the API key:
 
 ```powershell
-git clone <this-repo>
+git clone https://git-ce.rwth-aachen.de/tuda-iib/iibai/iibcode.git
 cd iibcode
-bun install --ignore-scripts   # see "Known issues" below for why --ignore-scripts
+bun install --ignore-scripts          # see Known issues for why --ignore-scripts
 [Environment]::SetEnvironmentVariable("GWDG_API_KEY", "your-key-here", "User")
-# open a fresh shell so the env var is picked up
+# open a fresh shell so the env var is visible
 ```
 
-The `GWDG_API_KEY` is referenced in `opencode.json` as `{env:GWDG_API_KEY}` and resolved at runtime — the key itself is never committed.
+The key is referenced in `opencode.json` as `{env:GWDG_API_KEY}` and resolved at runtime — never committed.
 
-### Verify it works
+## Build the `iibcode` binary
+
+Compile a standalone `iibcode` binary so you can launch the TUI from any project folder:
 
 ```powershell
-bun dev models gwdg              # lists configured GWDG models
-bun dev run --dir . "Reply with the single word PONG" -m gwdg/qwen3-coder-30b-a3b-instruct
-bun run gwdg:refresh             # re-probe model list & tool-call support against the live API
+bun run iibcode:build                                                  # → dist/iibcode.exe (~150 MB, 1–3 min)
+Copy-Item dist\iibcode.exe "$env:USERPROFILE\.bun\bin\iibcode.exe"     # put it on PATH
+iibcode --version
 ```
 
-### Run the interactive TUI (dev mode)
+(macOS/Linux: `cp dist/iibcode ~/.bun/bin/iibcode`, or `sudo cp dist/iibcode /usr/local/bin/iibcode`.)
 
-```powershell
-bun dev                          # launches OpenCode TUI from source
-```
-
-`bun dev` runs straight from source — no build step — but inherits the `--cwd packages/opencode` gotcha (see Known issues). Fine for testing changes you make to the fork, **not** good for daily coding work in real projects. For that, build a real binary:
-
-### Build & install the `iibcode` binary
-
-```powershell
-bun run iibcode:build                # produces dist/iibcode.exe (~150 MB), takes 1–3 min
-```
-
-Then put it on your PATH. The simplest spot is the bun bin folder, which is already on PATH from the bun install:
-
-```powershell
-Copy-Item dist\iibcode.exe "$env:USERPROFILE\.bun\bin\iibcode.exe"
-iibcode --version                # verify it runs from any folder
-```
-
-(macOS/Linux: `cp dist/iibcode ~/.bun/bin/iibcode` or `sudo cp dist/iibcode /usr/local/bin/iibcode`.)
-
-**One more step — make `iibcode` find the GWDG provider config from anywhere.** Drop a copy of `opencode.json` into the global opencode config dir so the `gwdg/...` models are visible no matter what folder you launch from. The location follows the XDG Base Directory spec; on Windows opencode uses `~/.config/opencode/` (not `%APPDATA%`):
+**Make the GWDG provider config global.** Drop a copy of `opencode.json` into the user-level config dir so the `gwdg/...` models are visible from any working directory. Windows opencode follows the XDG spec (`~/.config/opencode/`), not `%APPDATA%`:
 
 ```powershell
 $cfgDir = "$env:USERPROFILE\.config\opencode"
@@ -78,34 +49,23 @@ New-Item -ItemType Directory -Force -Path $cfgDir | Out-Null
 Copy-Item opencode.json "$cfgDir\opencode.json"
 ```
 
-(macOS/Linux: `mkdir -p ~/.config/opencode && cp opencode.json ~/.config/opencode/opencode.json`.)
+(macOS/Linux: `mkdir -p ~/.config/opencode && cp opencode.json ~/.config/opencode/`.)
 
-Now `iibcode` works in any directory and `/models` inside the TUI lists all 21 GWDG models.
+## Use it
 
-#### Do I need to rebuild after editing the fork?
-
-| What you changed | Rebuild needed? |
-|---|---|
-| `opencode.json` (model list, providers, limits) | **No** — read at runtime. Just edit and re-run `iibcode`. If you edited the global copy, that takes effect immediately too. |
-| `scripts/*` (build, gwdg-refresh, etc.) | No — these are dev-time scripts, not bundled. |
-| `packages/opencode/src/**` (TUI, tool dispatch, providers, anything in the source tree) | **Yes** — re-run `bun run iibcode:build` and copy the new `dist/iibcode.exe` over. |
-| Just iterating quickly on source changes? | Skip the rebuild loop entirely — use `bun dev` (runs from source) until happy, then build once. |
-
-**Rebuild quickstart** — run from the **repo root** (`iibcode/`):
-
-```powershell
-bun run iibcode:build                                                      # produces dist/iibcode.exe
-Copy-Item dist\iibcode.exe "$env:USERPROFILE\.bun\bin\iibcode.exe" -Force   # overwrite the on-PATH binary
-iibcode --version                                                          # sanity check
+```bash
+cd path/to/your/project
+iibcode                                                                # interactive TUI
+iibcode run "explain the auth flow" -m gwdg/qwen3-coder-30b-a3b-instruct  # one-shot
 ```
 
-`bun run iibcode:build` MUST run from the repo root, not from `packages/opencode/`. The script (`scripts/build-iibcode.ts`) handles `cd`'ing into the right place internally and renames the output binary to `iibcode`. If you run `bun run build` from inside `packages/opencode/` you'll get an `opencode.exe` in `packages/opencode/dist/...` but nothing on PATH gets updated — that's the trap.
+`gwdg/qwen3-coder-30b-a3b-instruct` is the recommended default for coding work. Inside the TUI, `/models` lists all 21 configured GWDG models.
 
-After every `bun run iibcode:build`, the build will dirty `bun.lock` and `packages/opencode/package.json` with line-ending changes on Windows. Don't commit those — `git checkout -- bun.lock packages/opencode/package.json` resets them.
+---
 
 ## Available models
 
-Configured in [`opencode.json`](opencode.json). All currently exposed via the `gwdg/` provider prefix. Ground-truthed against the live API on 2026-05-07 (re-run `bun run gwdg:refresh` to update).
+Configured in [`opencode.json`](opencode.json), all under the `gwdg/` provider prefix. Ground-truthed against the live API on 2026-05-07 — re-run `bun run gwdg:refresh` to update.
 
 ### Tool-capable (13) — usable for agentic flows
 
@@ -137,21 +97,71 @@ These return HTTP 400 when sent a `tools` array. The cause is a server-side vLLM
 
 Full GWDG catalog: `GET https://chat-ai.academiccloud.de/v1/models` with `Authorization: Bearer $GWDG_API_KEY`.
 
-## Pulling upstream updates
+## Updating from upstream OpenCode
 
-The fork is set up so `git pull` from `anomalyco/opencode` never conflicts with our customizations.
+GitLab has no equivalent of GitHub's "Sync fork" button for cross-host upstreams. The `upstream` remote is preconfigured to point at `anomalyco/opencode`, so syncing is three commands from the repo root:
 
 ```bash
 git fetch upstream
 git merge upstream/dev          # or rebase, your call
+git push origin dev             # publish the merged history to GitLab
 ```
 
-If you've created your own GitHub fork and want to push:
+The `merge=ours` driver auto-keeps our `README.md` and `docs/upstream-readme/` on conflict (one-time per clone: `git config merge.ours.driver true`). If upstream adds a new translation file (e.g. `README.cs.md`) it'll appear at the repo root after merge — move it: `git mv README.cs.md docs/upstream-readme/`. The `merge=ours` rule only fires for *existing* paths, so brand-new files slip through.
 
-```bash
-git remote add origin https://github.com/<you>/opencode.git
-git push -u origin dev
+## Developer workflow
+
+### Run from source (no build step)
+
+Useful while iterating on fork-internal changes:
+
+```powershell
+bun dev                                                                       # interactive TUI from source
+bun dev models gwdg                                                           # list configured models
+bun dev run --dir . "Reply with PONG" -m gwdg/qwen3-coder-30b-a3b-instruct    # one-shot
 ```
+
+`bun dev` inherits a `--cwd packages/opencode` (see Known issues), so it's only good for testing fork edits — pass `--dir <path>` to `run` to override. For daily coding work in real projects, use the built binary above.
+
+### Rebuild after editing the fork
+
+| What you changed | Rebuild needed? |
+|---|---|
+| `opencode.json` (model list, providers, limits) | **No** — read at runtime. Edit the global copy in `~/.config/opencode/` for an instant effect. |
+| `scripts/*` | No — dev-time scripts, not bundled. |
+| `packages/opencode/src/**` | **Yes** — re-run the build below. |
+| Iterating fast? | Use `bun dev` until happy, then build once. |
+
+Rebuild from the **repo root**:
+
+```powershell
+bun run iibcode:build
+Copy-Item dist\iibcode.exe "$env:USERPROFILE\.bun\bin\iibcode.exe" -Force
+iibcode --version
+```
+
+`bun run iibcode:build` MUST run from the repo root, not from `packages/opencode/`. The script handles `cd`'ing internally and renames the binary to `iibcode`. Running `bun run build` from inside `packages/opencode/` instead produces an `opencode.exe` that doesn't update anything on PATH.
+
+After every build, `bun.lock` and `packages/opencode/package.json` get dirtied with line-ending changes on Windows. Don't commit those — `git checkout -- bun.lock packages/opencode/package.json` resets them.
+
+### Re-probe the GWDG model catalog
+
+```powershell
+bun run gwdg:refresh
+```
+
+Updates `opencode.json` with the current model list and tool-call support flags. Run when GWDG enables tool calling on more deployments or adds new models.
+
+## What's customized in this fork
+
+| | |
+|---|---|
+| `opencode.json` | Adds the `gwdg` provider (and later `tudagpt`) using `@ai-sdk/openai-compatible` |
+| `README.md`, `CLAUDE.md` | Fork-specific docs |
+| `.gitattributes` | Marks our docs as `merge=ours` so upstream syncs don't conflict |
+| Everything else | Untouched upstream — pulls cleanly from `anomalyco/opencode` |
+
+The original upstream OpenCode README (English + 21 translations) lives in [`docs/upstream-readme/`](docs/upstream-readme/).
 
 ## Known issues
 
@@ -215,14 +225,14 @@ error: Fail extracting tarball for "@ibm/plex"
 
 The `dev` script in root `package.json` has `--cwd packages/opencode`. So when you run `bun dev run "..."`, OpenCode treats that subdirectory as the project. Workaround: pass `--dir <project-path>` to the `run` subcommand. The interactive TUI (`bun dev` with no args) inherits the same wrong cwd; for real use, build the binary and run from the actual project directory.
 
-### `git push` pre-push hook fails on `packages/enterprise/src/custom-elements.d.ts`
+### `git push` pre-push hook fails on `packages/{app,enterprise}/src/custom-elements.d.ts`
 
 The pre-push hook runs `bun turbo typecheck` across the whole monorepo. On Windows, it'll fail with:
 
 ```
-@opencode-ai/enterprise:typecheck:
+@opencode-ai/app:typecheck:
   src/custom-elements.d.ts(1,1): error TS1128: Declaration or statement expected.
-husky - pre-push script failed (code 2)
+husky - pre-push script failed (code 1)
 ```
 
 **Cause:** that file is a git symlink (mode `120000`) pointing to `../../ui/src/custom-elements.d.ts`. Without `core.symlinks=true`, git checks it out as a 33-byte text file containing the literal path string, which TypeScript can't parse. Enabling `core.symlinks` on Windows additionally requires **Developer Mode** (`Settings → System → For developers → Developer Mode`) or admin privileges, since regular users can't create symlinks.
@@ -232,12 +242,12 @@ husky - pre-push script failed (code 2)
 1. **Enable Developer Mode**, then once per clone:
    ```bash
    git config core.symlinks true
-   git checkout -- packages/enterprise/src/custom-elements.d.ts
+   git checkout -- packages/app/src/custom-elements.d.ts packages/enterprise/src/custom-elements.d.ts
    ```
    Persistent fix; the typecheck then passes.
-2. **Bypass the hook** for a single push: `git push --no-verify`. Reasonable when your changes are confined to `packages/opencode/` (which we don't ship the enterprise package from anyway), but you lose the local typecheck on your own changes too — run `bun turbo typecheck --filter=opencode` first to keep that safety net.
+2. **Bypass the hook** for a single push: `git push --no-verify`. Reasonable when your changes are confined to `packages/opencode/` (we don't ship the `app` or `enterprise` packages from this fork anyway), but you lose the local typecheck on your own changes too — run `bun turbo typecheck --filter=opencode` first to keep that safety net.
 
-We don't build or use the `@opencode-ai/enterprise` package in this fork, so the failure is purely a checkout-format problem, not a code problem.
+We don't build or use `@opencode-ai/app` or `@opencode-ai/enterprise` in this fork, so the failure is purely a checkout-format problem, not a code problem.
 
 ### 8 GWDG-served models don't currently expose tool calling
 
