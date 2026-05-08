@@ -4,7 +4,7 @@
 
 # iibcode — fork of [anomalyco/opencode](https://github.com/anomalyco/opencode)
 
-A personal fork of OpenCode wired up to use the **GWDG Chat AI** and **TUDaGPT** university LLM gateways with open-weight models (Qwen3-Coder, Devstral, GLM, Mistral Large, etc.) instead of frontier closed models.
+A personal fork of OpenCode wired up to use the **GWDG ChatAI** and **TUDaGPT** university LLM gateways with open-weight models (Qwen3-Coder, Devstral, GLM, Mistral Large, etc.) instead of frontier closed models.
 
 The idea: Claude Code-style interactive coding agent, but powered by models hosted on TU/GWDG infrastructure, fully open-source, no external API costs.
 

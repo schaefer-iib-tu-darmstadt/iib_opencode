@@ -3,7 +3,7 @@
   gwdg-refresh-models.ps1
 
   Re-grounds the `provider.gwdg.models` block of opencode.json against the
-  live GWDG / KISSKI API.
+  live GWDG ChatAI API.
 
     1. GET https://chat-ai.academiccloud.de/v1/models      -> live model catalog
     2. POST /v1/chat/completions per model with a tool def -> tool_call: true/false

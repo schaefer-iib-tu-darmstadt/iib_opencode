@@ -1,6 +1,6 @@
 # Claude Code context for this repo
 
-You are working in a **personal fork of [anomalyco/opencode](https://github.com/anomalyco/opencode)** that's customized to talk to GWDG Chat AI and TUDaGPT (university LLM gateways serving open-weight models). The customized CLI is branded `iibcode`. See `README.md` for user-facing docs (the original upstream English README and 21 translations live in `docs/upstream-readme/`).
+You are working in a **personal fork of [anomalyco/opencode](https://github.com/anomalyco/opencode)** that's customized to talk to GWDG ChatAI and TUDaGPT (university LLM gateways serving open-weight models). The customized CLI is branded `iibcode`. See `README.md` for user-facing docs (the original upstream English README and 21 translations live in `docs/upstream-readme/`).
 
 ## What this repo is
 

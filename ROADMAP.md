@@ -4,7 +4,7 @@ Living document. Stand: 2026-05-08.
 
 ## Vision
 
-iibcode soll eine **Open-Source-Alternative zu Claude Code** sein, die ausschließlich auf **akademischer Infrastruktur** läuft — also Open-Weight-Modelle, gehostet von GWDG (KISSKI/Chat AI) und TUDaGPT (TU Darmstadt HRZ). Kein Datenabfluss zu OpenAI/Anthropic, keine API-Kosten für Studis und Forschende, voller Zugang zum Source.
+iibcode soll eine **Open-Source-Alternative zu Claude Code** sein, die ausschließlich auf **akademischer Infrastruktur** läuft — also Open-Weight-Modelle, gehostet von GWDG ChatAI und TUDaGPT (TU Darmstadt HRZ). Kein Datenabfluss zu OpenAI/Anthropic, keine API-Kosten für Studis und Forschende, voller Zugang zum Source.
 
 Konkret:
 
