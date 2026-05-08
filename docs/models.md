@@ -2,9 +2,11 @@
 
 Configured in [`../opencode.json`](../opencode.json), all under the `gwdg/` provider prefix. Ground-truthed against the live API on 2026-05-07 — re-run `bun run gwdg:refresh` to update.
 
+For GWDG's own positioning of these models (descriptions, intended use cases, vision support, etc.), see their [model overview](https://docs.hpc.gwdg.de/services/ai-services/chat-ai/models/index.html). GWDG's official *standard recommendation* is `meta-llama-3.1-8b-instruct` for general use; iibcode picks `qwen3-coder-30b-a3b-instruct` as the default for coding-agent work.
+
 ## Tool-capable (13) — usable for agentic flows
 
-- `qwen3-coder-30b-a3b-instruct` — **recommended default** for coding tasks (256k context)
+- `qwen3-coder-30b-a3b-instruct` — **iibcode default** for coding tasks (256k context)
 - `qwen3.5-397b-a17b` — flagship Qwen, thinking/reasoning
 - `qwen3.5-122b-a10b` — large Qwen, thinking
 - `qwen3.5-35b-a3b` — mid Qwen, thinking

@@ -10,26 +10,25 @@ An open-source coding agent that runs on open-weight foundation models provided 
 
 - 🔒 **Data stays on university infrastructure** — prompts, code, and conversations go to GWDG or TUDaGPT, not to closed-API providers.
 - 🆓 **Free for academic users** — covered by KISSKI / TU institutional access; no per-token billing or external contracts.
-- 🧠 **13 tool-capable open-weight models** — coding, reasoning, and agentic flagships (see [Featured models](#featured-models) below).
+- 🧠 **13 tool-capable open-weight models** — coding, reasoning, and agentic flagships (see [Recommended models](#recommended-models-for-agentic-coding) below).
 - 🛠️ **Agentic TUI** — Claude Code / Codex / Aider-style coding assistant with file ops, shell, glob, grep, edit, web fetch.
 - 🪟 **Single ~150 MB binary** — Windows / macOS / Linux native; no Docker, no Python virtualenv.
 - 🔄 **Tracks upstream cleanly** — pulls [anomalyco/opencode](https://github.com/anomalyco/opencode) improvements via `merge=ours`; iibcode customizations stay intact.
 
-## Featured models
+## Recommended models for agentic coding
 
 <!-- Snapshot from the GWDG ChatAI live API; keep in sync with docs/models.md -->
 *Snapshot: May 2026.*
 
-| Model | Strength |
+| Model | Best for |
 |---|---|
-| `qwen3-coder-30b-a3b-instruct` | Coding-tuned, 256k context — **recommended default** |
-| `qwen3.5-397b-a17b` | Flagship Qwen, reasoning / thinking |
-| `mistral-large-3-675b-instruct-2512` | Mistral's flagship, general-purpose |
-| `devstral-2-123b-instruct-2512` | Mistral's coding-tuned model |
-| `glm-4.7` | Strong agentic / tool use |
-| `openai-gpt-oss-120b` | OpenAI's open weights |
+| `qwen3-coder-30b-a3b-instruct` | Daily coding, fast iteration — **iibcode default** (256k context) |
+| `devstral-2-123b-instruct-2512` | Heavier coding / refactors — Mistral's coding-tuned model |
+| `glm-4.7` | Multilingual agentic flows — GWDG's coding-marketed pick |
+| `qwen3.5-397b-a17b` | Complex reasoning + coding — flagship Qwen with thinking |
+| `mistral-large-3-675b-instruct-2512` | Maximum capability — Mistral flagship, general-purpose |
 
-13 tool-capable models in total. Full catalog (including 8 listed-but-not-yet-tool-capable) in [docs/models.md](docs/models.md).
+GWDG's official *standard recommendation* is `meta-llama-3.1-8b-instruct` for general use; see [GWDG's model overview](https://docs.hpc.gwdg.de/services/ai-services/chat-ai/models/index.html) for their full positioning. 13 tool-capable models in total — full catalog (including 8 listed-but-not-yet-tool-capable) in [docs/models.md](docs/models.md).
 
 ## Prerequisites
 
