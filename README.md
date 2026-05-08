@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/images/iibcode.png" width="800" alt="iibcode startup with GWDG API">
+</p>
+
 # iibcode — fork of [sst/opencode](https://github.com/sst/opencode)
 
 A personal fork of OpenCode wired up to use the **GWDG Chat AI** and **TUDaGPT** university LLM gateways with open-weight models (Qwen3-Coder, Devstral, GLM, Mistral Large, etc.) instead of frontier closed models.

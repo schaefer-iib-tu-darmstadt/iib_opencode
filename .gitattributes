@@ -5,3 +5,4 @@
 # on these paths whenever upstream edits them. See CLAUDE.md for context.
 README.md                    merge=ours
 docs/upstream-readme/**      merge=ours
+docs/images/**               merge=ours
