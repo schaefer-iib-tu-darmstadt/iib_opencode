@@ -10,10 +10,26 @@ An open-source coding agent that runs on open-weight foundation models provided 
 
 - 🔒 **Data stays on university infrastructure** — prompts, code, and conversations go to GWDG or TUDaGPT, not to closed-API providers.
 - 🆓 **Free for academic users** — covered by KISSKI / TU institutional access; no per-token billing or external contracts.
-- 🧠 **13 tool-capable open-weight models** — Qwen3-Coder (256k context), GLM-4.7, Mistral Large 3, Devstral, plus more. Full list in [docs/models.md](docs/models.md).
+- 🧠 **13 tool-capable open-weight models** — coding, reasoning, and agentic flagships (see [Featured models](#featured-models) below).
 - 🛠️ **Agentic TUI** — Claude Code / Codex / Aider-style coding assistant with file ops, shell, glob, grep, edit, web fetch.
 - 🪟 **Single ~150 MB binary** — Windows / macOS / Linux native; no Docker, no Python virtualenv.
 - 🔄 **Tracks upstream cleanly** — pulls [anomalyco/opencode](https://github.com/anomalyco/opencode) improvements via `merge=ours`; iibcode customizations stay intact.
+
+## Featured models
+
+<!-- Snapshot from the GWDG ChatAI live API; keep in sync with docs/models.md -->
+*Snapshot: May 2026.*
+
+| Model | Strength |
+|---|---|
+| `qwen3-coder-30b-a3b-instruct` | Coding-tuned, 256k context — **recommended default** |
+| `qwen3.5-397b-a17b` | Flagship Qwen, reasoning / thinking |
+| `mistral-large-3-675b-instruct-2512` | Mistral's flagship, general-purpose |
+| `devstral-2-123b-instruct-2512` | Mistral's coding-tuned model |
+| `glm-4.7` | Strong agentic / tool use |
+| `openai-gpt-oss-120b` | OpenAI's open weights |
+
+13 tool-capable models in total. Full catalog (including 8 listed-but-not-yet-tool-capable) in [docs/models.md](docs/models.md).
 
 ## Prerequisites
 
