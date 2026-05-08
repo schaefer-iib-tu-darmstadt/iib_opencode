@@ -6,6 +6,7 @@ GitLab has no equivalent of GitHub's "Sync fork" button for cross-host upstreams
 
 ```bash
 git remote add upstream https://github.com/anomalyco/opencode.git    # link to upstream
+git remote set-url --push upstream no_push                           # block accidental pushes to upstream
 git config merge.ours.driver true                                    # enable the merge=ours driver for our docs
 ```
 

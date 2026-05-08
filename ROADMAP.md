@@ -20,13 +20,12 @@ Konkret:
 
 - [ ] **TUDaGPT als zweiten Provider verdrahten.** Base-URL und Auth-Modus von HRZ klären (ist es OpenAI-compatible? Shibboleth-Header? Bearer?), Eintrag in `opencode.json` analog zu `gwdg`, Modell-Liste probe-en, `scripts/probe-tudagpt.ts` analog zu `scripts/probe-gwdg.ts`.
 - [ ] **Per-Model `limit.context` / `limit.output` kalibrieren.** Aktuell konservativer 128k-Guess für die meisten Modelle. Echte Werte aus `/v1/models` ziehen oder per Modell-Card recherchieren und in `opencode.json` setzen — wirkt sich direkt auf Kontext-Truncation und Kosten/Quota-Verhalten aus.
-- [ ] **`bun run gwdg:refresh` periodisch (CI-Cron, wöchentlich) laufen lassen.** Wenn GWDG `--enable-auto-tool-choice` für eines der 8 aktuell nicht-tool-fähigen Modelle einschaltet, soll das automatisch sichtbar werden statt manuell entdeckt.
+- [ ] **`gwdg:refresh` auto-anwendbar machen + periodisch (CI-Cron, wöchentlich) laufen lassen.** Heute dumpt das Skript Vorschläge nach stdout, gemerged wird per Hand. Ziel: ein `bun run gwdg:apply-refresh`, das einen 3-Wege-Merge in `opencode.json` macht (User-Overrides wie `limit` und `tool_call: false` bleiben erhalten, Namen + neue Modelle werden übernommen). Erst damit lohnt sich die Wochen-Cron — sonst produziert sie nur Diff-Noise. Sekundärer Nutzen: wenn GWDG `--enable-auto-tool-choice` auf einem bisher nicht-tool-fähigen Modell anschaltet, fällt das automatisch auf.
 
 ### CLI / UX
 
 - [ ] **System-Prompt für Qwen3-Coder tunen.** OpenCode bindet Agent-Configs; ein Qwen-spezifischer Prompt (knapper, weniger Gemini/Claude-Phrasing, expliziter zu Tool-Schemas) dürfte messbar weniger Halluzinationen geben. Hook: OpenCode Agent-Config.
 - [ ] **Tool-Set für kleinere Modelle trimmen.** OpenCode exposed 15+ Tools; 8B-Modelle wie `meta-llama-3.1-8b-instruct` werden davon überfordert. Ein optionales `--tool-profile minimal|full` Flag, das in `packages/opencode/src/tool/registry.ts` greift.
-- [ ] **Numerik-Bug fixen (oder umgehen).** Modelle halluzinieren Counts (Qwen3-Coder: "31" obwohl Glob 41 zurückgibt). Tool-Output-Counts direkt im UI rendern statt das Modell zählen lassen — siehe `CLAUDE.md` Gotcha #2.
 
 ### Distribution
 
