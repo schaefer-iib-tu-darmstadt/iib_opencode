@@ -3,7 +3,7 @@
 **Status:** Approved through brainstorming; ready for implementation planning
 **Date:** 2026-05-07
 **Author:** Claude (Opus 4.7) + Nils
-**Repo:** `iibcode` (fork of `sst/opencode`; cloned into `iib_opencode/` on Nils' machine)
+**Repo:** `iibcode` (fork of `anomalyco/opencode`; cloned into `iibcode/` on Nils' machine)
 
 ---
 
@@ -344,7 +344,7 @@ Add the `gwdg:refresh` script entry described above. Nothing else changes.
 
 ### Merge-safety smoke test (optional, requires upstream remote)
 
-10. **Prerequisite** — none of the fork's remotes currently point at `sst/opencode`. To run this test, first add it: `git remote add upstream https://github.com/sst/opencode.git && git fetch upstream`. Then from a clean tree: `git merge --no-commit --no-ff upstream/dev && git status`. No conflicts on `opencode.json` or `scripts/gwdg-refresh-models.ps1`. Only `.gitignore` could plausibly conflict — trivial one-line resolve. Then `git merge --abort`. Whether to commit the `upstream` remote configuration is out of scope for this spec.
+10. **Prerequisite** — none of the fork's remotes currently point at `anomalyco/opencode`. To run this test, first add it: `git remote add upstream https://github.com/anomalyco/opencode.git && git fetch upstream`. Then from a clean tree: `git merge --no-commit --no-ff upstream/dev && git status`. No conflicts on `opencode.json` or `scripts/gwdg-refresh-models.ps1`. Only `.gitignore` could plausibly conflict — trivial one-line resolve. Then `git merge --abort`. Whether to commit the `upstream` remote configuration is out of scope for this spec.
 
 ### Out of verification scope
 

@@ -1,19 +1,19 @@
 # Claude Code context for this repo
 
-You are working in a **personal fork of [sst/opencode](https://github.com/sst/opencode)** that's customized to talk to GWDG Chat AI and TUDaGPT (university LLM gateways serving open-weight models). The customized CLI is branded `iibcode`. See `README.md` for user-facing docs (the original upstream English README and 21 translations live in `docs/upstream-readme/`).
+You are working in a **personal fork of [anomalyco/opencode](https://github.com/anomalyco/opencode)** that's customized to talk to GWDG Chat AI and TUDaGPT (university LLM gateways serving open-weight models). The customized CLI is branded `iibcode`. See `README.md` for user-facing docs (the original upstream English README and 21 translations live in `docs/upstream-readme/`).
 
 ## What this repo is
 
-- A clone of `sst/opencode` (a TypeScript/Bun coding-agent CLI/TUI), with a project-local `opencode.json` adding `@ai-sdk/openai-compatible` providers for **GWDG** (and eventually TUDaGPT).
+- A clone of `anomalyco/opencode` (a TypeScript/Bun coding-agent CLI/TUI), with a project-local `opencode.json` adding `@ai-sdk/openai-compatible` providers for **GWDG** (and eventually TUDaGPT).
 - Default branch: **`dev`** (upstream's default — not `main`).
 - Two git remotes:
-  - `upstream` → `https://github.com/sst/opencode.git` (sst, read-only for us)
-  - `origin` → user's personal fork (to be added when they create one on GitHub)
+  - `upstream` → `https://github.com/anomalyco/opencode.git` (anomalyco, read-only for us)
+  - `origin` → `https://github.com/schaefer-iib-tu-darmstadt/iibcode.git` (user's fork)
 
 ## Golden rules when working here
 
 1. **Don't modify upstream files unless absolutely necessary.** Every file we edit becomes a merge conflict on `git pull upstream`. Prefer config-only changes via `opencode.json`. If you must touch source, do it in a clearly-named branch and document why.
-2. **Never push to `upstream`.** That's `sst/opencode`. Pushes go to `origin` (the user's fork) only.
+2. **Never push to `upstream`.** That's `anomalyco/opencode`. Pushes go to `origin` (the user's fork) only.
 3. **Never commit secrets.** `GWDG_API_KEY` lives in the User-scope env var on Windows, referenced as `{env:GWDG_API_KEY}` in `opencode.json`. Don't inline it.
 4. **Don't run `bun install` without `--ignore-scripts` on Windows** unless Visual Studio C++ Build Tools are installed (see "Known issues" in `README.md`). It will fail building `tree-sitter-powershell`.
 

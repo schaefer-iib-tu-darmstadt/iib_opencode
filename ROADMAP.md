@@ -10,7 +10,7 @@ Konkret:
 
 - Bedienbarkeit auf Claude-Code-Niveau (TUI + Headless-Run + Tool-Use).
 - Provider sind austauschbar, aber der Default-Stack ist **TU/GWDG**.
-- Updates aus `sst/opencode` werden weiter regelmäßig gemerged — wir bauen *darauf auf*, nicht daneben.
+- Updates aus `anomalyco/opencode` werden weiter regelmäßig gemerged — wir bauen *darauf auf*, nicht daneben.
 
 ---
 
@@ -84,4 +84,4 @@ Bewusst raus aus dem Scope, damit die Roadmap fokussiert bleibt:
 
 - **Closed-Frontier-Modelle als Default-Provider.** Anthropic/OpenAI direkt einbinden geht technisch trivial via `@ai-sdk/openai` — machen wir nicht, weil es das Alleinstellungsmerkmal "TU/GWDG-only, Datensouveränität" verwässert. Wer Claude direkt will, nimmt Claude Code.
 - **Eigenes Modell-Hosting.** Wir betreiben keine GPUs. Provider machen das.
-- **Voll-divergierender Fork.** Wenn ein Feature in `sst/opencode` upstream Sinn ergibt (z.B. neuer Provider-Typ), upstream einreichen statt hier abweichen. Ziel ist Merge-Friction so klein wie möglich zu halten.
+- **Voll-divergierender Fork.** Wenn ein Feature in `anomalyco/opencode` upstream Sinn ergibt (z.B. neuer Provider-Typ), upstream einreichen statt hier abweichen. Ziel ist Merge-Friction so klein wie möglich zu halten.

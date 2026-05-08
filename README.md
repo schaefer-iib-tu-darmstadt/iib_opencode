@@ -2,7 +2,7 @@
   <img src="docs/images/iibcode.png" width="800" alt="iibcode startup with GWDG API">
 </p>
 
-# iibcode — fork of [sst/opencode](https://github.com/sst/opencode)
+# iibcode — fork of [anomalyco/opencode](https://github.com/anomalyco/opencode)
 
 A personal fork of OpenCode wired up to use the **GWDG Chat AI** and **TUDaGPT** university LLM gateways with open-weight models (Qwen3-Coder, Devstral, GLM, Mistral Large, etc.) instead of frontier closed models.
 
@@ -16,7 +16,7 @@ The idea: Claude Code-style interactive coding agent, but powered by models host
 |---|---|
 | `opencode.json` | Adds the `gwdg` provider (and later `tudagpt`) using `@ai-sdk/openai-compatible` |
 | `README.md` (this file), `CLAUDE.md` | Fork-specific docs (quickstart + Claude Code context) |
-| Everything else | Untouched upstream — pulls cleanly from `sst/opencode` |
+| Everything else | Untouched upstream — pulls cleanly from `anomalyco/opencode` |
 
 ## Quick start
 
@@ -31,7 +31,7 @@ The idea: Claude Code-style interactive coding agent, but powered by models host
 
 ```powershell
 git clone <this-repo>
-cd iib_opencode
+cd iibcode
 bun install --ignore-scripts   # see "Known issues" below for why --ignore-scripts
 [Environment]::SetEnvironmentVariable("GWDG_API_KEY", "your-key-here", "User")
 # open a fresh shell so the env var is picked up
@@ -91,7 +91,7 @@ Now `iibcode` works in any directory and `/models` inside the TUI lists all 21 G
 | `packages/opencode/src/**` (TUI, tool dispatch, providers, anything in the source tree) | **Yes** — re-run `bun run iibcode:build` and copy the new `dist/iibcode.exe` over. |
 | Just iterating quickly on source changes? | Skip the rebuild loop entirely — use `bun dev` (runs from source) until happy, then build once. |
 
-**Rebuild quickstart** — run from the **repo root** (`iib_opencode/`):
+**Rebuild quickstart** — run from the **repo root** (`iibcode/`):
 
 ```powershell
 bun run iibcode:build                                                      # produces dist/iibcode.exe
@@ -139,7 +139,7 @@ Full GWDG catalog: `GET https://chat-ai.academiccloud.de/v1/models` with `Author
 
 ## Pulling upstream updates
 
-The fork is set up so `git pull` from `sst/opencode` never conflicts with our customizations.
+The fork is set up so `git pull` from `anomalyco/opencode` never conflicts with our customizations.
 
 ```bash
 git fetch upstream
@@ -193,7 +193,7 @@ error: Fail extracting tarball for "@ibm/plex"
 
 4. **Open a new PowerShell**, `cd` into the repo, and run `bun install --ignore-scripts` **multiple times in a row**. The first run will partially fail (EPERM on a few packages, then hang on the final 4 tarball extractions — `Ctrl+C` it after ~3 min if it doesn't return). Each retry has more of the cache already populated, so fewer files race against Sophos at once. After 2–3 retries, `bun install --ignore-scripts` will exit `0` in <2 seconds:
    ```powershell
-   cd C:\path\to\iib_opencode
+   cd C:\path\to\iibcode
    bun install --ignore-scripts        # may hang or print errors — Ctrl+C after a few min
    bun install --ignore-scripts        # likely exit 0 in 2s now
    bun install --ignore-scripts        # confirm idempotent
