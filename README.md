@@ -63,15 +63,14 @@ iibcode --version
 
 (macOS/Linux: `cp dist/iibcode ~/.bun/bin/iibcode`, or `sudo cp dist/iibcode /usr/local/bin/iibcode`.)
 
-**Make the GWDG provider config global.** Drop a copy of `opencode.json` into the user-level config dir so the `gwdg/...` models are visible from any working directory. Windows opencode follows the XDG spec (`~/.config/opencode/`), not `%APPDATA%`:
+**Make the GWDG provider config global.** Copy `opencode.json` into the user-level config dir so the `gwdg/...` models — and the `enabled_providers` allowlist that hides opencode.ai's free models — are visible from any working directory:
 
-```powershell
-$cfgDir = "$env:USERPROFILE\.config\opencode"
-New-Item -ItemType Directory -Force -Path $cfgDir | Out-Null
-Copy-Item opencode.json "$cfgDir\opencode.json"
+```bash
+bun run setup:global-config            # writes ~/.config/opencode/opencode.json
+bun run setup:global-config -- --force # overwrite an existing global config
 ```
 
-(macOS/Linux: `mkdir -p ~/.config/opencode && cp opencode.json ~/.config/opencode/`.)
+Re-run after editing the project `opencode.json` to keep the two in sync. Path is `$XDG_CONFIG_HOME/opencode/` (defaulting to `~/.config/opencode/` on every platform — Windows opencode follows XDG, not `%APPDATA%`).
 
 ## Use it
 
