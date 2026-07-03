@@ -103,17 +103,18 @@ Invoke-RestMethod -Uri "https://chat-ai.academiccloud.de/v1/models" -Method Get 
 4. **`merge=ours` driver needs one-time per-clone setup.** `.gitattributes` marks `README.md` and `docs/upstream-readme/**` as `merge=ours` so `git merge upstream/dev` auto-keeps our version on those paths. The driver itself is not committed; on every fresh clone run once: `git config merge.ours.driver true`. Without it, you'll get normal merge conflicts on the README during upstream syncs (resolution is still trivial: `git checkout --ours README.md docs/upstream-readme/`).
 5. **Upstream sometimes adds a new translation** (e.g. `README.cs.md`). After `git merge upstream/dev`, it'll appear at the repo root. Move it: `git mv README.cs.md docs/upstream-readme/`. The `merge=ours` rule only fires for *existing* paths, so a brand-new file slips through.
 
-## Verified working as of 2026-05-07
+## Verified working as of 2026-07-03
 
 - GWDG API key valid (32 hex chars).
-- `GET /v1/models` returns 21 live models (all `status: ready`).
-- 13 of 21 GWDG-served models return well-formed OpenAI tool calls (probed live). 8 fail with a vLLM-side `--enable-auto-tool-choice` server-config error and are configured `tool_call: false` in `opencode.json`.
+- `GET /v1/models` returns 19 live models (all `status: ready`).
+- 13 of 19 GWDG-served models return well-formed OpenAI tool calls (probed live via `/models-refresh`). 6 fail with a vLLM-side `--enable-auto-tool-choice` server-config error and are configured `tool_call: false` in `opencode.json`. Since May: `gemma-4-31b-it` gained tool calling, `gemma-3-27b-it` left the catalog, `qwen3.5-35b-a3b`/`qwen3.5-27b` were replaced by `qwen3.6-27b`.
 - `gwdg/qwen3-coder-30b-a3b-instruct` is the recommended default for agentic use — fast, tool-capable, coding-tuned.
+- Per-model `limit.context` values now come from the GWDG docs scrape (no longer 128k guesses); `limit.output` is still a uniform 8192 default.
 - Run `/models-refresh` inside the TUI to re-probe (adds new GWDG models and refreshes per-model context limits from the GWDG docs; handy when GWDG enables tool calling on more deployments).
 
 ## Tasks that are still TODO
 
 - Wire up TUDaGPT as a second provider once the base URL and auth are available.
-- Tune `limit.context` and `limit.output` per model in `opencode.json` (currently mostly conservative 128k guesses).
+- Wire up Blablador (Helmholtz AI / FZ Jülich) as a third provider — OpenAI-compatible gateway, so config-only via `opencode.json` like GWDG; needs a Helmholtz AAI login for the API key.
 - Consider trimming OpenCode's default tool set (15+ tools) for smaller open-weight models that get confused by too many options. Hook: `packages/opencode/src/tool/registry.ts`.
 - Write a Qwen-tuned system prompt and bind it via OpenCode's agent config.

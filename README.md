@@ -12,13 +12,15 @@ An open-source coding agent that runs on open-weight foundation models provided 
 - 🆓 **Free for academic users** — covered by KISSKI / TU institutional access; no per-token billing or external contracts.
 - 🧠 **13 tool-capable open-weight models** — coding, reasoning, and agentic flagships (see [Recommended models](#recommended-models-for-agentic-coding) below).
 - 🛠️ **Agentic TUI** — Claude Code / Codex / Aider-style coding assistant with file ops, shell, glob, grep, edit, web fetch.
+- 📊 **Live rate-limit display** — your GWDG request budget (req/min, req/hr) in the TUI sidebar, read from the API's `x-ratelimit-*` headers; retries back off using the real numbers.
+- 🔁 **`/models-refresh`** — one TUI command re-syncs the model list, tool-call support, and per-model context limits against the live GWDG catalog.
 - 🪟 **Single ~150 MB binary, Windows-first** — no Docker, no Python virtualenv. Setup script and docs target Windows + PowerShell; macOS/Linux build from source but are untested.
 - 🔄 **Tracks upstream cleanly** — pulls [anomalyco/opencode](https://github.com/anomalyco/opencode) improvements via `merge=ours`; iibcode customizations stay intact.
 
 ## Recommended models for agentic coding
 
 <!-- Snapshot from the GWDG ChatAI live API; keep in sync with docs/models.md -->
-*Snapshot: May 2026.*
+*Snapshot: July 2026.*
 
 | Model | Best for |
 |---|---|
@@ -28,7 +30,7 @@ An open-source coding agent that runs on open-weight foundation models provided 
 | `qwen3.5-397b-a17b` | Complex reasoning + coding — flagship Qwen with thinking |
 | `mistral-large-3-675b-instruct-2512` | Maximum capability — Mistral flagship, general-purpose |
 
-GWDG's official *standard recommendation* is `meta-llama-3.1-8b-instruct` for general use; see [GWDG's model overview](https://docs.hpc.gwdg.de/services/ai-services/chat-ai/models/index.html) for their full positioning. 13 tool-capable models in total — full catalog (including 8 listed-but-not-yet-tool-capable) in [docs/models.md](docs/models.md).
+GWDG's official *standard recommendation* is `meta-llama-3.1-8b-instruct` for general use; see [GWDG's model overview](https://docs.hpc.gwdg.de/services/ai-services/chat-ai/models/index.html) for their full positioning. 13 tool-capable models in total — full catalog (including 6 listed-but-not-yet-tool-capable) in [docs/models.md](docs/models.md).
 
 ## Prerequisites
 
@@ -87,7 +89,7 @@ iibcode run "explain the auth flow" -m gwdg/qwen3-coder-30b-a3b-instruct  # one-
 ## Roadmap
 
 - **TUDaGPT** as a second provider once the base URL and auth are available
-- Per-model `limit.context` / `limit.output` tuning in `opencode.json` (currently conservative 128k guesses)
+- **Blablador** (Helmholtz AI / FZ Jülich) as a third provider — OpenAI-compatible like GWDG, so config-only
 - Trim the default tool set for smaller open-weight models that get confused by 15+ tools
 - Qwen-tuned system prompt bound via opencode's agent config
 
@@ -98,6 +100,7 @@ iibcode run "explain the auth flow" -m gwdg/qwen3-coder-30b-a3b-instruct  # one-
 | [docs/models.md](docs/models.md) | Full list of GWDG models, capabilities, and how to re-probe |
 | [docs/troubleshooting.md](docs/troubleshooting.md) | Sophos EPERM workaround, Windows symlink trap, `bun install` quirks |
 | [docs/development.md](docs/development.md) | `bun dev`, rebuild flow, what's customized in this fork |
+| [docs/architecture.md](docs/architecture.md) | Architecture overview (German) — monorepo layout and how the pieces fit |
 | [docs/fork-changes.md](docs/fork-changes.md) | Canonical list of every deviation from upstream opencode |
 | [docs/release.md](docs/release.md) | Releasing the Windows binary (Windows-only for now) |
 | [docs/maintainer-sync.md](docs/maintainer-sync.md) | Pulling updates from `anomalyco/opencode` upstream |
