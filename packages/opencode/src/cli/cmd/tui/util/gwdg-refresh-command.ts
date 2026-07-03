@@ -96,7 +96,10 @@ async function run({ dialog, toast, project }: Deps): Promise<void> {
       if (!model) continue
       const probe = await GwdgRefresh.probeToolCall(id, apiKey)
       const { entry } = GwdgRefresh.buildEntry(model, probe, limits)
-      newEntries[id] = entry
+      // iibcode: only keep tool-capable models. Models without tool calling can't
+      // drive the agentic loop (read/edit/bash), so they'd only clutter /models.
+      // Vision stays covered by gemma-4-31b-it, which has tools + attachment.
+      if (entry.tool_call) newEntries[id] = entry
       if (i < diff.newIds.length - 1) await GwdgRefresh.sleep(GwdgRefresh.constants.PROBE_GAP_MS)
     }
 

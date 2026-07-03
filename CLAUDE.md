@@ -22,7 +22,7 @@ You are working in a **personal fork of [anomalyco/opencode](https://github.com/
 
 | Path | What |
 |---|---|
-| `opencode.json` | Project-local config. **Owned by us.** Defines `provider.gwdg` and the model list. |
+| `opencode.json` | Project-local config. **Owned by us.** Defines `provider.gwdg`, the model list, and the default model (top-level `model` key). |
 | `README.md` | **Owned by us.** The iibcode quickstart (was `IIBCODE_QUICKSTART.md` before the rename). Marked `merge=ours` in `.gitattributes`. |
 | `docs/upstream-readme/` | **Owned by us.** Holds the original upstream English `README.md` + 21 translations, moved here so iibcode owns the root README. Also `merge=ours`. |
 | `docs/*.md` | **Owned by us.** Fork-specific docs split out from `README.md` (`development.md`, `troubleshooting.md`, `maintainer-sync.md`, `models.md`). All `merge=ours`. |
@@ -78,7 +78,7 @@ You are working in a **personal fork of [anomalyco/opencode](https://github.com/
 bun dev models gwdg
 
 # One-shot run from any directory — IMPORTANT: use --dir, see "Gotcha" below
-bun dev run --dir . "your prompt" -m gwdg/qwen3-coder-30b-a3b-instruct
+bun dev run --dir . "your prompt" -m gwdg/qwen3.6-35b-a3b
 
 # Interactive TUI (rooted in packages/opencode due to --cwd in dev script — gotcha below)
 bun dev
@@ -106,11 +106,11 @@ Invoke-RestMethod -Uri "https://chat-ai.academiccloud.de/v1/models" -Method Get 
 ## Verified working as of 2026-07-03
 
 - GWDG API key valid (32 hex chars).
-- `GET /v1/models` returns 19 live models (all `status: ready`).
-- 13 of 19 GWDG-served models return well-formed OpenAI tool calls (probed live via `/models-refresh`). 6 fail with a vLLM-side `--enable-auto-tool-choice` server-config error and are configured `tool_call: false` in `opencode.json`. Since May: `gemma-4-31b-it` gained tool calling, `gemma-3-27b-it` left the catalog, `qwen3.5-35b-a3b`/`qwen3.5-27b` were replaced by `qwen3.6-27b`.
-- `gwdg/qwen3-coder-30b-a3b-instruct` is the recommended default for agentic use — fast, tool-capable, coding-tuned.
+- `GET /v1/models` returns 15 live models. GWDG ran a decommissioning wave during the evening of 2026-07-03: `llama-3.3-70b-instruct` and `teuken-7b-instruct-research` died (404/500); `qwen3-coder-30b-a3b-instruct`, `deepseek-r1-distill-llama-70b`, and `internvl3.5-30b-a3b` are delisted but still answered that evening; `qwen3-coder-next` is new (tool-capable, 256k).
+- 12 of 15 catalog models return well-formed OpenAI tool calls. `opencode.json` holds only the 13 tool-capable models (the 12 live ones + the delisted former default, flagged in its display name); catalog models without tool calling (`apertus`, `medgemma-27b-it`, `qwen3-omni`; they fail with a vLLM-side `--enable-auto-tool-choice` server-config error) are deliberately not configured. Since May: `gemma-4-31b-it` gained tool calling, `gemma-3-27b-it` left the catalog, `qwen3.5-35b-a3b`/`qwen3.5-27b` were replaced by `qwen3.6-27b`.
+- `gwdg/qwen3.6-35b-a3b` is the default for agentic use (top-level `model` in `opencode.json`) — fast MoE (162 tok/s, sub-second tool calls in a 2026-07-03 probe), GWDG-endorsed for coding/agentic, 262k context. The former default `qwen3-coder-30b-a3b-instruct` is deprecated by GWDG ("will be removed soon"). `qwen3.6-27b` was evaluated and rejected: dense + hidden thinking → 25 tok/s and 16.6 s per tool call. GWDG rate limits: 2 req/s, 60 req/min, 9000 req/h.
 - Per-model `limit.context` values now come from the GWDG docs scrape (no longer 128k guesses); `limit.output` is still a uniform 8192 default.
-- Run `/models-refresh` inside the TUI to re-probe (adds new GWDG models and refreshes per-model context limits from the GWDG docs; handy when GWDG enables tool calling on more deployments).
+- Run `/models-refresh` inside the TUI to re-probe (adds new **tool-capable** GWDG models — non-tool models are skipped since 2026-07-03 — and refreshes per-model context limits from the GWDG docs). It only *adds* — models that vanish from the catalog are kept as stale entries and must be pruned by hand.
 
 ## Tasks that are still TODO
 

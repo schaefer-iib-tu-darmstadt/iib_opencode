@@ -24,13 +24,13 @@ An open-source coding agent that runs on open-weight foundation models provided 
 
 | Model | Best for |
 |---|---|
-| `qwen3-coder-30b-a3b-instruct` | Daily coding, fast iteration — **iibcode default** (256k context) |
+| `qwen3.6-35b-a3b` | Daily coding, fast iteration — **iibcode default** (262k context) |
 | `devstral-2-123b-instruct-2512` | Heavier coding / refactors — Mistral's coding-tuned model |
 | `glm-4.7` | Multilingual agentic flows — GWDG's coding-marketed pick |
 | `qwen3.5-397b-a17b` | Complex reasoning + coding — flagship Qwen with thinking |
 | `mistral-large-3-675b-instruct-2512` | Maximum capability — Mistral flagship, general-purpose |
 
-GWDG's official *standard recommendation* is `meta-llama-3.1-8b-instruct` for general use; see [GWDG's model overview](https://docs.hpc.gwdg.de/services/ai-services/chat-ai/models/index.html) for their full positioning. 13 tool-capable models in total — full catalog (including 6 listed-but-not-yet-tool-capable) in [docs/models.md](docs/models.md).
+GWDG's official *standard recommendation* is `meta-llama-3.1-8b-instruct` for general use; see [GWDG's model overview](https://docs.hpc.gwdg.de/services/ai-services/chat-ai/models/index.html) for their full positioning. GWDG retired several models on 2026-07-03: the previous iibcode default `qwen3-coder-30b-a3b-instruct` is delisted (still answering for now), with `qwen3-coder-next` as its successor. 13 tool-capable models configured — full catalog (plus 3 catalog models without tool calling, deliberately not configured) in [docs/models.md](docs/models.md).
 
 ## Prerequisites
 
@@ -80,11 +80,11 @@ bun run setup:global-config                                           # writes ~
 
 ```bash
 cd path/to/your/project
-iibcode                                                                # interactive TUI
-iibcode run "explain the auth flow" -m gwdg/qwen3-coder-30b-a3b-instruct  # one-shot
+iibcode                                                    # interactive TUI
+iibcode run "explain the auth flow" -m gwdg/qwen3.6-35b-a3b  # one-shot
 ```
 
-`gwdg/qwen3-coder-30b-a3b-instruct` is the recommended default for coding work. Inside the TUI, `/models` lists all configured GWDG models.
+`gwdg/qwen3.6-35b-a3b` is the default (set via `model` in `opencode.json`) — fast MoE inference, solid tool calling, 262k context. Inside the TUI, `/models` lists all configured GWDG models.
 
 ## Roadmap
 
