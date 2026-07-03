@@ -12,7 +12,7 @@ An open-source coding agent that runs on open-weight foundation models provided 
 - 🆓 **Free for academic users** — covered by KISSKI / TU institutional access; no per-token billing or external contracts.
 - 🧠 **13 tool-capable open-weight models** — coding, reasoning, and agentic flagships (see [Recommended models](#recommended-models-for-agentic-coding) below).
 - 🛠️ **Agentic TUI** — Claude Code / Codex / Aider-style coding assistant with file ops, shell, glob, grep, edit, web fetch.
-- 🪟 **Single ~150 MB binary** — Windows / macOS / Linux native; no Docker, no Python virtualenv.
+- 🪟 **Single ~150 MB binary, Windows-first** — no Docker, no Python virtualenv. Setup script and docs target Windows + PowerShell; macOS/Linux build from source but are untested.
 - 🔄 **Tracks upstream cleanly** — pulls [anomalyco/opencode](https://github.com/anomalyco/opencode) improvements via `merge=ours`; iibcode customizations stay intact.
 
 ## Recommended models for agentic coding
@@ -39,38 +39,40 @@ GWDG's official *standard recommendation* is `meta-llama-3.1-8b-instruct` for ge
 
 ## Setup
 
-Clone, install dependencies, store the API key:
+One command, from inside the freshly-cloned repo:
 
 ```powershell
 git clone https://git-ce.rwth-aachen.de/tuda-iib/iibai/iibcode.git
 cd iibcode
-bun install --ignore-scripts          # see docs/troubleshooting.md if this hangs or errors
-[Environment]::SetEnvironmentVariable("GWDG_API_KEY", "your-key-here", "User")
-# open a fresh shell so the env var is visible
+bun run setup
 ```
 
-The key is referenced in `opencode.json` as `{env:GWDG_API_KEY}` and resolved at runtime — never committed.
+`bun run setup` installs dependencies, builds the `iibcode` binary and puts it on your PATH, syncs the provider config globally, and prompts for your GWDG API key. Then **open a new terminal** (so the key is visible) and jump to [Use it](#use-it).
 
-## Build the `iibcode` binary
+### Where the API key lives
 
-Compile a standalone `iibcode` binary so you can launch the TUI from any project folder:
+`bun run setup` stores your key as a **user environment variable** named `GWDG_API_KEY`. `opencode.json` references it as `{env:GWDG_API_KEY}` and resolves it at runtime, so the key never lands in a file or a commit. To set it by hand instead of via the script:
+
+- **Windows:** `[Environment]::SetEnvironmentVariable("GWDG_API_KEY", "your-key", "User")`
+- **macOS/Linux:** `echo 'export GWDG_API_KEY="your-key"' >> ~/.zshrc`  *(or `~/.bashrc`)*
+
+Either way, open a fresh shell afterwards so the variable is visible.
+
+<details>
+<summary><b>What <code>bun run setup</code> does (run these by hand instead)</b></summary>
 
 ```powershell
-bun run iibcode:build                                                  # → dist/iibcode.exe (~150 MB, 1–3 min)
-Copy-Item dist\iibcode.exe "$env:USERPROFILE\.bun\bin\iibcode.exe"     # put it on PATH
-iibcode --version
+bun install --ignore-scripts                                          # deps (see docs/troubleshooting.md if it errors)
+bun run iibcode:build                                                 # → dist/iibcode.exe (~150 MB, 1–3 min)
+Copy-Item dist\iibcode.exe "$env:USERPROFILE\.bun\bin\iibcode.exe"    # put it on PATH
+bun run setup:global-config                                           # writes ~/.config/opencode/opencode.json
 ```
 
 (macOS/Linux: `cp dist/iibcode ~/.bun/bin/iibcode`, or `sudo cp dist/iibcode /usr/local/bin/iibcode`.)
 
-**Make the GWDG provider config global.** Copy `opencode.json` into the user-level config dir so the `gwdg/...` models — and the `enabled_providers` allowlist that hides opencode.ai's free models — are visible from any working directory:
+**Global config** makes the `gwdg/...` models — and the `enabled_providers` allowlist that hides opencode.ai's free models — visible from any working directory. Re-run `bun run setup:global-config -- --force` after editing the project `opencode.json` to keep the two in sync. Path is `$XDG_CONFIG_HOME/opencode/`, defaulting to `~/.config/opencode/` on every platform (Windows opencode follows XDG, not `%APPDATA%`).
 
-```bash
-bun run setup:global-config            # writes ~/.config/opencode/opencode.json
-bun run setup:global-config -- --force # overwrite an existing global config
-```
-
-Re-run after editing the project `opencode.json` to keep the two in sync. Path is `$XDG_CONFIG_HOME/opencode/` (defaulting to `~/.config/opencode/` on every platform — Windows opencode follows XDG, not `%APPDATA%`).
+</details>
 
 ## Use it
 
@@ -96,8 +98,16 @@ iibcode run "explain the auth flow" -m gwdg/qwen3-coder-30b-a3b-instruct  # one-
 | [docs/models.md](docs/models.md) | Full list of GWDG models, capabilities, and how to re-probe |
 | [docs/troubleshooting.md](docs/troubleshooting.md) | Sophos EPERM workaround, Windows symlink trap, `bun install` quirks |
 | [docs/development.md](docs/development.md) | `bun dev`, rebuild flow, what's customized in this fork |
+| [docs/fork-changes.md](docs/fork-changes.md) | Canonical list of every deviation from upstream opencode |
+| [docs/release.md](docs/release.md) | Releasing the Windows binary (Windows-only for now) |
 | [docs/maintainer-sync.md](docs/maintainer-sync.md) | Pulling updates from `anomalyco/opencode` upstream |
 | [docs/upstream-readme/](docs/upstream-readme/) | Original OpenCode README (English + 21 translations) |
+
+> **Upstream sync** (replaces GitHub's "Sync fork" button):
+> ```bash
+> git fetch upstream && git merge upstream/dev && git push origin dev
+> ```
+> See [docs/maintainer-sync.md](docs/maintainer-sync.md) for first-time setup and caveats.
 
 ## License
 

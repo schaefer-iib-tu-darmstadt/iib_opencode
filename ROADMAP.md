@@ -19,8 +19,8 @@ Konkret:
 ### Provider
 
 - [ ] **TUDaGPT als zweiten Provider verdrahten.** Base-URL und Auth-Modus von HRZ klären (ist es OpenAI-compatible? Shibboleth-Header? Bearer?), Eintrag in `opencode.json` analog zu `gwdg`, Modell-Liste probe-en, `scripts/probe-tudagpt.ts` analog zu `scripts/probe-gwdg.ts`.
-- [ ] **Per-Model `limit.context` / `limit.output` kalibrieren.** Aktuell konservativer 128k-Guess für die meisten Modelle. Echte Werte aus `/v1/models` ziehen oder per Modell-Card recherchieren und in `opencode.json` setzen — wirkt sich direkt auf Kontext-Truncation und Kosten/Quota-Verhalten aus.
-- [ ] **`gwdg:refresh` auto-anwendbar machen + periodisch (CI-Cron, wöchentlich) laufen lassen.** Heute dumpt das Skript Vorschläge nach stdout, gemerged wird per Hand. Ziel: ein `bun run gwdg:apply-refresh`, das einen 3-Wege-Merge in `opencode.json` macht (User-Overrides wie `limit` und `tool_call: false` bleiben erhalten, Namen + neue Modelle werden übernommen). Erst damit lohnt sich die Wochen-Cron — sonst produziert sie nur Diff-Noise. Sekundärer Nutzen: wenn GWDG `--enable-auto-tool-choice` auf einem bisher nicht-tool-fähigen Modell anschaltet, fällt das automatisch auf.
+- [x] **Per-Model `limit.context` kalibrieren.** `/models-refresh` scrapet die Context-Windows aus der GWDG-Doku und setzt `limit.context` pro Modell in `opencode.json` (neue *und* bestehende Modelle). Offen bleibt `limit.output` — GWDG publiziert keine Output-Caps, daher weiterhin konservativer 8k-Default.
+- [ ] **`/models-refresh` periodisch/headless laufen lassen (CI-Cron, wöchentlich).** Der In-TUI-Command wendet Änderungen heute direkt an (neue Modelle + Context-Limits; bestehende `output`-Limits und `tool_call: false`-Overrides bleiben erhalten). Was fehlt, ist ein headless-Einstiegspunkt für einen Wochen-Cron — die Kernlogik in `packages/opencode/src/cli/cmd/tui/util/gwdg-refresh.ts` ist bereits UI-frei und wiederverwendbar. Sekundärer Nutzen: wenn GWDG `--enable-auto-tool-choice` auf einem bisher nicht-tool-fähigen Modell anschaltet, fällt das automatisch auf.
 
 ### CLI / UX
 
@@ -73,7 +73,7 @@ Nicht committed, aber lohnt diskutieren:
 
 - Wöchentlich `git fetch upstream && git merge upstream/dev`. Konflikte sollten dank `merge=ours` Driver auf README + `docs/upstream-readme/` minimal sein.
 - Nach Upstream-Merges: prüfen, ob neue Translations als Top-Level `README.<lang>.md` reingerutscht sind (siehe `CLAUDE.md` Gotcha #5) und nach `docs/upstream-readme/` verschieben.
-- Nach jedem GWDG-Re-Deploy (kommunizieren die das überhaupt? — sonst monatlich blind): `bun run gwdg:refresh`.
+- Nach jedem GWDG-Re-Deploy (kommunizieren die das überhaupt? — sonst monatlich blind): `/models-refresh` im TUI.
 
 ---
 

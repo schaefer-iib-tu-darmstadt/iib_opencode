@@ -37,22 +37,17 @@ After every build, `bun.lock` and `packages/opencode/package.json` get dirtied w
 
 ## Re-probe the GWDG model catalog
 
-```powershell
-bun run gwdg:refresh
-```
-
-Updates `opencode.json` with the current model list and tool-call support flags. Run when GWDG enables tool calling on more deployments or adds new models. See [models.md](models.md) for the current snapshot.
+Run the **`/models-refresh`** command inside the TUI. It fetches the current GWDG
+`/v1/models` catalog, probes tool-call support for any new models, scrapes each
+model's context window from the [GWDG docs](https://docs.hpc.gwdg.de/services/ai-services/chat-ai/models/index.html),
+and writes all of it back into `opencode.json` (existing hand-tuned `output`
+limits and `tool_call` flags are preserved). Run it when GWDG enables tool
+calling on more deployments or adds new models. See [models.md](models.md) for
+the current snapshot. Implementation: `packages/opencode/src/cli/cmd/tui/util/gwdg-refresh.ts`.
 
 ## What's customized in this fork
 
-| Path | Notes |
-|---|---|
-| `opencode.json` | Adds the `gwdg` provider (and later `tudagpt`) using `@ai-sdk/openai-compatible` |
-| `README.md`, `CLAUDE.md`, `docs/*.md` | Fork-specific docs |
-| `.gitattributes` | Marks our docs as `merge=ours` so upstream syncs don't conflict |
-| `scripts/build-iibcode.ts` | Builds and renames the binary as `iibcode` |
-| `scripts/gwdg-refresh.ts` | Re-probes the GWDG catalog from outside the TUI |
-| Everything else | Untouched upstream — pulls cleanly from `anomalyco/opencode` |
+See **[fork-changes.md](fork-changes.md)** — the canonical, per-file list of everything that deviates from upstream. Short version: the `gwdg` provider is pure config (`opencode.json`), the fork features (rate-limit sidebar, `/models-refresh`, branding) live in fork-owned files, and a handful of upstream files carry small commented hook blocks to wire them up.
 
 The original upstream OpenCode README (English + 21 translations) lives in [`upstream-readme/`](upstream-readme/).
 
