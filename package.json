@@ -18,7 +18,7 @@
     "random": "echo 'Random script'",
     "hello": "echo 'Hello World!'",
     "test": "echo 'do not run tests from root' && exit 1",
-    "gwdg:refresh": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/gwdg-refresh-models.ps1",
+    "setup": "bun run scripts/setup.ts",
     "iibcode:build": "bun run scripts/build-iibcode.ts",
     "setup:global-config": "bun run scripts/install-global-config.ts"
   },
