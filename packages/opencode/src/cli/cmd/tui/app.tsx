@@ -64,7 +64,8 @@ import { createTuiApi } from "@/cli/cmd/tui/plugin/api"
 import { TuiPluginRuntime } from "@/cli/cmd/tui/plugin/runtime"
 import type { RouteMap } from "@/cli/cmd/tui/plugin/api"
 import { FormatError, FormatUnknownError } from "@/cli/error"
-import * as GwdgRefresh from "@tui/util/gwdg-refresh"
+import * as GwdgRefreshCommand from "@tui/util/gwdg-refresh-command"
+import { BRAND } from "@/cli/brand"
 
 import type { EventSource } from "./context/sdk"
 import { DialogVariant } from "./component/dialog-variant"
@@ -317,24 +318,24 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
     if (!terminalTitleEnabled() || Flag.OPENCODE_DISABLE_TERMINAL_TITLE) return
 
     if (route.data.type === "home") {
-      renderer.setTerminalTitle("iibcode")
+      renderer.setTerminalTitle(BRAND.name)
       return
     }
 
     if (route.data.type === "session") {
       const session = sync.session.get(route.data.sessionID)
       if (!session || SessionApi.isDefaultTitle(session.title)) {
-        renderer.setTerminalTitle("iibcode")
+        renderer.setTerminalTitle(BRAND.name)
         return
       }
 
       const title = session.title.length > 40 ? session.title.slice(0, 37) + "..." : session.title
-      renderer.setTerminalTitle(`iib | ${title}`)
+      renderer.setTerminalTitle(`${BRAND.short} | ${title}`)
       return
     }
 
     if (route.data.type === "plugin") {
-      renderer.setTerminalTitle(`iib | ${route.data.id}`)
+      renderer.setTerminalTitle(`${BRAND.short} | ${route.data.id}`)
     }
   })
 
@@ -457,105 +458,7 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
         dialog.replace(() => <DialogModel />)
       },
     },
-    {
-      title: "Refresh GWDG models",
-      value: "model.refresh_gwdg",
-      category: "Agent",
-      slash: {
-        name: "models-refresh",
-      },
-      onSelect: async () => {
-        try {
-          const apiKey = GwdgRefresh.getApiKey()
-
-          const projectDir = project.data.instance.path.directory || process.cwd()
-          const configPath = await GwdgRefresh.findOpencodeJson(projectDir)
-          if (!configPath) {
-            toast.show({ variant: "error", message: "opencode.json not found near " + projectDir })
-            return
-          }
-
-          toast.show({ variant: "info", message: "Fetching GWDG model catalog..." })
-          const catalog = await GwdgRefresh.fetchCatalog(apiKey)
-          const config = await GwdgRefresh.readConfig(configPath)
-          const providers = (config.provider as Record<string, { models?: Record<string, unknown> }> | undefined) ?? {}
-          const existing = providers.gwdg?.models ?? {}
-          const diff = GwdgRefresh.diffCatalog(existing, catalog)
-
-          if (diff.newIds.length === 0) {
-            const staleNote = diff.staleIds.length > 0 ? ` (${diff.staleIds.length} stale in config)` : ""
-            toast.show({
-              variant: "success",
-              message: `All ${diff.readyCount} GWDG models match opencode.json${staleNote}`,
-            })
-            return
-          }
-
-          const lines = [
-            `Found ${diff.newIds.length} new model(s):`,
-            ...diff.newIds.map((id) => `  + ${id}`),
-          ]
-          if (diff.staleIds.length > 0) {
-            lines.push("", `${diff.staleIds.length} model(s) in config but not on GWDG (kept):`)
-            lines.push(...diff.staleIds.map((id) => `  ~ ${id}`))
-          }
-          lines.push("", `Probe each new model for tool-call support? (~${Math.ceil((diff.newIds.length * GwdgRefresh.constants.PROBE_GAP_MS) / 1000)}s)`)
-
-          const ok = await DialogConfirm.show(dialog, "Refresh GWDG models", lines.join("\n"))
-          if (!ok) return
-
-          const newEntries: Record<string, GwdgRefresh.ConfigModelEntry> = {}
-          for (let i = 0; i < diff.newIds.length; i++) {
-            const id = diff.newIds[i]
-            toast.show({ variant: "info", message: `Probing ${i + 1}/${diff.newIds.length}: ${id}` })
-            const model = catalog.data.find((m) => m.id === id)
-            if (!model) continue
-            const probe = await GwdgRefresh.probeToolCall(id, apiKey)
-            const { entry } = GwdgRefresh.buildEntry(model, probe)
-            newEntries[id] = entry
-            if (i < diff.newIds.length - 1) await GwdgRefresh.sleep(GwdgRefresh.constants.PROBE_GAP_MS)
-          }
-
-          const provider = (config.provider ??= {} as Record<string, unknown>) as Record<
-            string,
-            { models?: Record<string, unknown> }
-          >
-          const gwdg = (provider.gwdg ??= {})
-          gwdg.models = { ...(gwdg.models ?? {}), ...newEntries }
-          await GwdgRefresh.writeConfig(configPath, config)
-
-          // The TUI parent process registers a SIGUSR2 handler in thread.ts that
-          // invalidates the worker's config cache and triggers a TUI re-bootstrap.
-          // process.emit fires the same handler cross-platform; process.kill may
-          // be a no-op on Windows because Bun does not deliver POSIX signals there.
-          let reloadAttempted = false
-          try {
-            ;(process as unknown as { emit: (name: string, value: string) => void }).emit(
-              "SIGUSR2",
-              "SIGUSR2",
-            )
-            reloadAttempted = true
-          } catch {}
-
-          toast.show({
-            variant: "success",
-            message: reloadAttempted
-              ? `Added ${diff.newIds.length} model(s) — open /models to see them`
-              : `Added ${diff.newIds.length} model(s) — restart TUI to use them`,
-          })
-        } catch (e) {
-          if (e instanceof GwdgRefresh.GwdgRefreshError) {
-            toast.show({
-              variant: "error",
-              title: e.message,
-              message: e.hint ?? "",
-            })
-            return
-          }
-          toast.error(e)
-        }
-      },
-    },
+    GwdgRefreshCommand.command({ dialog, toast, project }), // iibcode: /models-refresh (GWDG catalog sync)
     {
       title: "Model cycle",
       value: "model.cycle_recent",

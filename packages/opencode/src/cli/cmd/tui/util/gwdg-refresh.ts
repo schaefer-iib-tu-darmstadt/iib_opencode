@@ -1,5 +1,6 @@
 import { promises as fs } from "node:fs"
 import path from "node:path"
+import os from "node:os"
 
 const GWDG_BASE_URL = "https://chat-ai.academiccloud.de/v1"
 
@@ -10,6 +11,10 @@ const CATALOG_TIMEOUT_MS = 30_000
 
 const DEFAULT_CONTEXT = 128_000
 const DEFAULT_OUTPUT = 8192
+
+// GWDG publishes per-model context windows only in its HTML docs — the /v1/models
+// API omits them — so we scrape this page's "Context window in tokens" column.
+const GWDG_DOCS_URL = "https://docs.hpc.gwdg.de/services/ai-services/chat-ai/models/index.html"
 
 export type CatalogModel = {
   id: string
@@ -172,6 +177,34 @@ export async function findOpencodeJson(startDir: string): Promise<string | null>
   }
 }
 
+// The user-level opencode config, used when there's no project-local opencode.json
+// (e.g. iibcode launched from an unrelated directory). Path mirrors
+// install-global-config.ts and @opencode-ai/core/global: $XDG_CONFIG_HOME/opencode,
+// defaulting to ~/.config/opencode on every platform, including Windows.
+export function globalConfigPath(): string {
+  const xdgConfigHome = process.env.XDG_CONFIG_HOME || path.join(os.homedir(), ".config")
+  return path.join(xdgConfigHome, "opencode", "opencode.json")
+}
+
+export type ConfigTarget =
+  | { path: string }
+  | { path: null; projectDir: string; globalPath: string }
+
+// Locate the opencode.json that /models-refresh should edit: prefer a project-local
+// one (walking up from startDir), otherwise fall back to the global user config —
+// the config actually in effect when iibcode runs outside the repo. Returns the
+// resolved path, or where we looked so the caller can report both locations.
+export async function resolveConfigPath(startDir: string): Promise<ConfigTarget> {
+  const local = await findOpencodeJson(startDir)
+  if (local) return { path: local }
+  const globalPath = globalConfigPath()
+  try {
+    const stat = await fs.stat(globalPath)
+    if (stat.isFile()) return { path: globalPath }
+  } catch {}
+  return { path: null, projectDir: startDir, globalPath }
+}
+
 export async function readConfig(filepath: string): Promise<Record<string, unknown>> {
   const text = await fs.readFile(filepath, "utf8")
   return JSON.parse(text) as Record<string, unknown>
@@ -185,6 +218,7 @@ export async function writeConfig(filepath: string, config: unknown): Promise<vo
 export function buildEntry(
   model: CatalogModel,
   probe: ProbeResult,
+  limits: ContextLimit[] = [],
 ): { entry: ConfigModelEntry; tags: CategoryTag[] } {
   const tags = categorize(model)
   const supported = probe.ok && probe.supported
@@ -201,11 +235,105 @@ export function buildEntry(
   const entry: ConfigModelEntry = {
     name: displayName,
     tool_call: supported,
-    limit: { context: DEFAULT_CONTEXT, output: DEFAULT_OUTPUT },
+    limit: { context: resolveContextLimit(model, limits) ?? DEFAULT_CONTEXT, output: DEFAULT_OUTPUT },
   }
   if (tags.includes("thinking")) entry.reasoning = true
   if (tags.includes("vision")) entry.attachment = true
   return { entry, tags }
+}
+
+// A scraped docs row: the model name split into comparable tokens + its context window.
+export type ContextLimit = { tokens: string[]; context: number }
+
+// Split a model name/id into lowercase alphanumeric tokens ("GLM-4.7" -> ["glm","4","7"],
+// "meta-llama-3.1-8b-instruct" -> ["meta","llama","3","1","8b","instruct"]).
+function tokenize(value: string): string[] {
+  return value.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean)
+}
+
+// Parse a context-window cell like "256K", "65k", "1M", "131072", "65,536".
+export function parseContextSize(text: string): number | null {
+  const t = text.replace(/,/g, "").toLowerCase().trim()
+  const m = t.match(/^(\d+(?:\.\d+)?)\s*([km])?$/)
+  if (!m) return null
+  const n = Number.parseFloat(m[1])
+  if (m[2] === "m") return Math.round(n * 1_000_000)
+  if (m[2] === "k") return Math.round(n * 1_000)
+  return Math.round(n)
+}
+
+// Scrape the GWDG docs table into a list of { tokens, context } rows.
+// Best-effort: any failure (offline, layout change) yields [] so the caller
+// falls back to defaults / existing limits rather than aborting the refresh.
+export async function fetchContextLimits(): Promise<ContextLimit[]> {
+  let html: string
+  try {
+    const res = await fetch(GWDG_DOCS_URL, { signal: AbortSignal.timeout(CATALOG_TIMEOUT_MS) })
+    if (!res.ok) return []
+    html = await res.text()
+  } catch {
+    return []
+  }
+
+  const limits: ContextLimit[] = []
+  const rows = [...html.matchAll(/<tr>(.*?)<\/tr>/gs)].map((m) => m[1])
+  for (const row of rows) {
+    const cells = [...row.matchAll(/<t[dh][^>]*>(.*?)<\/t[dh]>/gs)].map((c) => c[1])
+    if (cells.length < 5) continue
+    // Column layout: Organization | Model | Open | Release date | Context window | ...
+    const name = cells[1].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim()
+    const context = parseContextSize(cells[4].replace(/<[^>]+>/g, " ").trim())
+    if (name && context != null) limits.push({ tokens: tokenize(name), context })
+  }
+  return limits
+}
+
+// Match a catalog model to a scraped docs row and return its context window.
+// Tries the model's display name then its id, first as an exact token-set match,
+// then as a subset (docs tokens all present in the model — handles "Meta"/"OpenAI"
+// prefixes and extra words), preferring the most specific (longest) docs row.
+export function resolveContextLimit(model: CatalogModel, limits: ContextLimit[]): number | undefined {
+  const candidates = [model.name, model.id].filter((v): v is string => !!v).map(tokenize)
+  for (const cand of candidates) {
+    const set = new Set(cand)
+    const exact = limits.find((l) => new Set(l.tokens).size === set.size && l.tokens.every((t) => set.has(t)))
+    if (exact) return exact.context
+  }
+  let best: ContextLimit | undefined
+  for (const cand of candidates) {
+    const set = new Set(cand)
+    for (const l of limits) {
+      if (l.tokens.length >= 2 && l.tokens.every((t) => set.has(t))) {
+        if (!best || l.tokens.length > best.tokens.length) best = l
+      }
+    }
+    if (best) return best.context
+  }
+  return undefined
+}
+
+// Update context limits on models already in the config from the scraped rows.
+// Mutates `models` in place; returns the ids whose context actually changed.
+export function applyContextLimits(
+  models: Record<string, { limit?: { context?: number; output?: number } }>,
+  catalog: Catalog,
+  limits: ContextLimit[],
+): { updated: string[] } {
+  const updated: string[] = []
+  for (const [id, entry] of Object.entries(models)) {
+    const model = catalog.data.find((m) => m.id === id) ?? { id }
+    const context = resolveContextLimit(model, limits)
+    if (context == null) continue
+    if (!entry.limit) {
+      entry.limit = { context, output: DEFAULT_OUTPUT }
+    } else if (entry.limit.context !== context) {
+      entry.limit.context = context
+    } else {
+      continue
+    }
+    updated.push(id)
+  }
+  return { updated }
 }
 
 export function diffCatalog(
