@@ -21,7 +21,7 @@ Everything not listed below is untouched upstream code.
 
 | Path | What |
 |---|---|
-| `opencode.json` | The `gwdg` provider: 21 models, per-model `tool_call` / `limit` / `reasoning` flags, `enabled_providers` allowlist. Upstream gitignores this path; we un-ignored it. |
+| `opencode.json` | The `gwdg` provider: 14 tool-capable models, per-model `tool_call` / `limit` / `reasoning` flags, `enabled_providers` allowlist. Upstream gitignores this path; we un-ignored it. |
 | `README.md` | iibcode quickstart (upstream's README moved to `docs/upstream-readme/`) |
 | `docs/*.md`, `docs/images/`, `docs/upstream-readme/` | All fork documentation + the archived upstream README and its 21 translations |
 | `ROADMAP.md`, `CLAUDE.md`, `.gitattributes` | Roadmap, agent context, `merge=ours` markers |
@@ -29,7 +29,7 @@ Everything not listed below is untouched upstream code.
 | `scripts/build-iibcode.ts` | Builds `dist/iibcode[.exe]`: `bun run iibcode:build` |
 | `scripts/install-global-config.ts` | Syncs `opencode.json` → `~/.config/opencode/`: `bun run setup:global-config` |
 | `packages/opencode/src/cli/brand.ts` | Brand strings (`iibcode` / `iib`) used by the terminal-title patch in `app.tsx` |
-| `packages/opencode/src/cli/cmd/tui/util/gwdg-refresh.ts` | `/models-refresh` logic: fetch GWDG catalog, probe tool-call support, scrape context windows from the GWDG docs, write `opencode.json` |
+| `packages/opencode/src/cli/cmd/tui/util/gwdg-refresh.ts` | `/models-refresh` logic: fetch GWDG catalog, probe tool-call support by HTTP status (2xx accept / 4xx reject / retry transient 5xx·429·408), scrape context windows from the GWDG docs, write `opencode.json` |
 | `packages/opencode/src/cli/cmd/tui/util/gwdg-refresh-command.ts` | The `/models-refresh` TUI command handler (kept out of `app.tsx` on purpose) |
 | `packages/opencode/src/cli/cmd/tui/feature-plugins/sidebar/rate-limit.tsx` | The "Rate limit" sidebar section + its slot registration |
 

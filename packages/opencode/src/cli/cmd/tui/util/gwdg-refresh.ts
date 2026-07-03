@@ -80,7 +80,23 @@ export async function fetchCatalog(apiKey: string): Promise<Catalog> {
   return (await res.json()) as Catalog
 }
 
-export async function probeToolCall(modelId: string, apiKey: string): Promise<ProbeResult> {
+// Tool-call support is a *server* property and GWDG signals it deterministically:
+// a deployment without a tool parser rejects the request with an HTTP 4xx
+// ("enable-auto-tool-choice"), while a tool-capable one returns 2xx — whether or
+// not the model chooses to call on that particular turn. Whether the model
+// actually emits a tool_call is noisy (even qwen3.6-35b answers some probes in
+// prose, and GWDG throws intermittent 500s), so we must NOT gate on it — doing so
+// false-negatives good models. We classify purely on HTTP status: 4xx =>
+// unsupported, 2xx => supported, retrying transient 5xx / network up to a budget.
+const TOOL_PROBE_MAX_CALLS = 4
+const TOOL_PROBE_RETRY_GAP_MS = 1100
+
+type ProbeOnce =
+  | { kind: "accepted" } // 2xx — deployment accepts tool calls
+  | { kind: "server-reject" } // 4xx — deployment has no tool support
+  | { kind: "transient"; error: string } // 5xx / network — retry
+
+async function probeToolCallOnce(modelId: string, apiKey: string): Promise<ProbeOnce> {
   const body = JSON.stringify({
     model: modelId,
     messages: [
@@ -123,29 +139,36 @@ export async function probeToolCall(modelId: string, apiKey: string): Promise<Pr
       signal: AbortSignal.timeout(PROBE_TIMEOUT_MS),
     })
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : String(e) }
+    return { kind: "transient", error: e instanceof Error ? e.message : String(e) }
   }
 
-  if (!res.ok) {
-    const text = await res.text().catch(() => "")
-    const error = `HTTP ${res.status}: ${text.slice(0, 200)}`
-    const brokenHint = /enable-auto-tool-choice/.test(text) ? "no tool calling on GWDG" : undefined
-    return { ok: false, error, brokenHint }
+  // Drain the body so the socket can be reused; its content is irrelevant — the
+  // HTTP status alone says whether the deployment accepts tools.
+  await res.text().catch(() => "")
+  if (res.ok) return { kind: "accepted" }
+  // 5xx (server blip) and 429/408 (rate limit / request timeout) are transient —
+  // retry, never let them mislabel a tool-capable model as unsupported. Other 4xx
+  // (esp. the enable-auto-tool-choice 400) mean the deployment truly has no tool
+  // support — definitive.
+  if (res.status >= 500 || res.status === 429 || res.status === 408) {
+    return { kind: "transient", error: `HTTP ${res.status}` }
   }
+  return { kind: "server-reject" }
+}
 
-  const json = (await res.json().catch(() => null)) as
-    | {
-        choices?: Array<{
-          message?: { tool_calls?: unknown[] }
-          finish_reason?: string
-        }>
-      }
-    | null
-  const choice = json?.choices?.[0]
-  const toolCalls = choice?.message?.tool_calls
-  const supported =
-    Array.isArray(toolCalls) && toolCalls.length > 0 && choice?.finish_reason === "tool_calls"
-  return { ok: true, supported }
+export async function probeToolCall(modelId: string, apiKey: string): Promise<ProbeResult> {
+  let calls = 0
+  let lastTransient: string | undefined
+  while (calls < TOOL_PROBE_MAX_CALLS) {
+    if (calls > 0) await sleep(TOOL_PROBE_RETRY_GAP_MS)
+    calls++
+    const r = await probeToolCallOnce(modelId, apiKey)
+    if (r.kind === "accepted") return { ok: true, supported: true }
+    if (r.kind === "server-reject") return { ok: true, supported: false }
+    lastTransient = r.error
+  }
+  // Only transient failures within the budget — inconclusive this run.
+  return { ok: false, error: lastTransient ?? "probe inconclusive after retries" }
 }
 
 export function categorize(model: CatalogModel): CategoryTag[] {

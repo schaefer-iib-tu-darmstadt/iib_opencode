@@ -1,36 +1,40 @@
 # iibcode
 
-An open-source coding agent that runs on open-weight foundation models provided by **GWDG ChatAI** or **TUDaGPT**. Claude Code / Codex / Aider-style interactive TUI — free for academic use, prompts and code stay on university infrastructure. Personal/experimental fork of [opencode](https://github.com/anomalyco/opencode); model list and config will drift, breaking changes likely.
+An open-source coding agent that runs on open-weight foundation models provided by **GWDG ChatAI** or **TUDaGPT**. Claude Code style interactive TUI. Free for academic use, prompts and code stay on university infrastructure. Fork of [opencode](https://github.com/anomalyco/opencode); model list and config will drift, breaking changes likely.
 
 <p align="center">
   <img src="docs/images/iibcode.png" width="800" alt="iibcode TUI running against the GWDG API">
 </p>
 
+<p align="center">
+  <img src="docs/images/iibcode_message.png" width="800" alt="iibcode TUI running against the GWDG API">
+</p>
+
 ## Features
 
-- 🔒 **Data stays on university infrastructure** — prompts, code, and conversations go to GWDG or TUDaGPT, not to closed-API providers.
-- 🆓 **Free for academic users** — covered by KISSKI / TU institutional access; no per-token billing or external contracts.
-- 🧠 **13 tool-capable open-weight models** — coding, reasoning, and agentic flagships (see [Recommended models](#recommended-models-for-agentic-coding) below).
-- 🛠️ **Agentic TUI** — Claude Code / Codex / Aider-style coding assistant with file ops, shell, glob, grep, edit, web fetch.
-- 📊 **Live rate-limit display** — your GWDG request budget (req/min, req/hr) in the TUI sidebar, read from the API's `x-ratelimit-*` headers; retries back off using the real numbers.
-- 🔁 **`/models-refresh`** — one TUI command re-syncs the model list, tool-call support, and per-model context limits against the live GWDG catalog.
-- 🪟 **Single ~150 MB binary, Windows-first** — no Docker, no Python virtualenv. Setup script and docs target Windows + PowerShell; macOS/Linux build from source but are untested.
-- 🔄 **Tracks upstream cleanly** — pulls [anomalyco/opencode](https://github.com/anomalyco/opencode) improvements via `merge=ours`; iibcode customizations stay intact.
+- 🔒 **Data stays on university infrastructure:** Prompts, code, and conversations go to GWDG or TUDaGPT, not to closed-API providers.
+- 🆓 **Free for academic users:** Covered by KISSKI / TU institutional access; no per-token billing or external contracts.
+- 🧠 **Tool-capable open-weight models:** Coding, reasoning, and agentic flagships (see [Recommended models](#recommended-models-for-agentic-coding) below).
+- 🛠️ **Agentic TUI:** Claude Code / Codex-style coding assistant with file ops, shell, glob, grep, edit, web fetch.
+- 📊 **Live rate-limit display:** GWDG request budget (req/min, req/hr) in the TUI sidebar, read from the API's `x-ratelimit-*` headers; retries back off using the real numbers.
+- 🔁 **`/models-refresh`:** TUI command re-syncs the model list, tool-call support, and per-model context limits against the live GWDG catalog.
+- 🪟 **Single ~150 MB binary, Windows-first:** No Docker, no Python virtualenv. Setup script and docs target Windows + PowerShell; macOS/Linux build from source but are untested.
+- 🔄 **Tracks upstream cleanly:** Pulls [anomalyco/opencode](https://github.com/anomalyco/opencode) improvements via `merge=ours`; iibcode customizations stay intact.
 
 ## Recommended models for agentic coding
 
 <!-- Snapshot from the GWDG ChatAI live API; keep in sync with docs/models.md -->
 *Snapshot: July 2026.*
 
-| Model | Best for |
+| Model | Description |
 |---|---|
-| `qwen3.6-35b-a3b` | Daily coding, fast iteration — **iibcode default** (262k context) |
-| `devstral-2-123b-instruct-2512` | Heavier coding / refactors — Mistral's coding-tuned model |
-| `glm-4.7` | Multilingual agentic flows — GWDG's coding-marketed pick |
-| `qwen3.5-397b-a17b` | Complex reasoning + coding — flagship Qwen with thinking |
-| `mistral-large-3-675b-instruct-2512` | Maximum capability — Mistral flagship, general-purpose |
+| `qwen3.6-35b-a3b` | **recommended default** |
+| `devstral-2-123b-instruct-2512` | Mistral's coding-tuned model |
+| `glm-4.7` | GWDG's coding-marketed pick |
+| `qwen3.5-397b-a17b` | Flagship Qwen with thinking |
+| `mistral-large-3-675b-instruct-2512` | Mistral flagship, general-purpose |
 
-GWDG's official *standard recommendation* is `meta-llama-3.1-8b-instruct` for general use; see [GWDG's model overview](https://docs.hpc.gwdg.de/services/ai-services/chat-ai/models/index.html) for their full positioning. GWDG retired several models on 2026-07-03: the previous iibcode default `qwen3-coder-30b-a3b-instruct` is delisted (still answering for now), with `qwen3-coder-next` as its successor. 13 tool-capable models configured — full catalog (plus 3 catalog models without tool calling, deliberately not configured) in [docs/models.md](docs/models.md).
+GWDG's official *standard recommendation* is `meta-llama-3.1-8b-instruct` for general use; see [GWDG's model overview](https://docs.hpc.gwdg.de/services/ai-services/chat-ai/models/index.html) for their full positioning. GWDG retires models continously. Currently 14 tool-capable models configured in [docs/models.md](docs/models.md).
 
 ## Prerequisites
 
@@ -41,7 +45,7 @@ GWDG's official *standard recommendation* is `meta-llama-3.1-8b-instruct` for ge
 
 ## Setup
 
-One command, from inside the freshly-cloned repo:
+One command, from **inside the freshly-cloned repo**:
 
 ```powershell
 git clone https://git-ce.rwth-aachen.de/tuda-iib/iibai/iibcode.git
@@ -80,31 +84,27 @@ bun run setup:global-config                                           # writes ~
 
 ```bash
 cd path/to/your/project
-iibcode                                                    # interactive TUI
-iibcode run "explain the auth flow" -m gwdg/qwen3.6-35b-a3b  # one-shot
+iibcode      
 ```
 
-`gwdg/qwen3.6-35b-a3b` is the default (set via `model` in `opencode.json`) — fast MoE inference, solid tool calling, 262k context. Inside the TUI, `/models` lists all configured GWDG models.
 
 ## Roadmap
 
 - **TUDaGPT** as a second provider once the base URL and auth are available
-- **Blablador** (Helmholtz AI / FZ Jülich) as a third provider — OpenAI-compatible like GWDG, so config-only
-- Trim the default tool set for smaller open-weight models that get confused by 15+ tools
-- Qwen-tuned system prompt bound via opencode's agent config
+- **Blablador** (Helmholtz AI / FZ Jülich) as a third provider planned (Kimi K2.7, MiniMax)
 
 ## Documentation
 
 | | |
 |---|---|
-| [docs/models.md](docs/models.md) | Full list of GWDG models, capabilities, and how to re-probe |
+| [docs/models.md](docs/models.md) | Full list of GWDG models, capabilities |
 | [docs/troubleshooting.md](docs/troubleshooting.md) | Sophos EPERM workaround, Windows symlink trap, `bun install` quirks |
-| [docs/development.md](docs/development.md) | `bun dev`, rebuild flow, what's customized in this fork |
-| [docs/architecture.md](docs/architecture.md) | Architecture overview (German) — monorepo layout and how the pieces fit |
-| [docs/fork-changes.md](docs/fork-changes.md) | Canonical list of every deviation from upstream opencode |
-| [docs/release.md](docs/release.md) | Releasing the Windows binary (Windows-only for now) |
-| [docs/maintainer-sync.md](docs/maintainer-sync.md) | Pulling updates from `anomalyco/opencode` upstream |
-| [docs/upstream-readme/](docs/upstream-readme/) | Original OpenCode README (English + 21 translations) |
+| [docs/development.md](docs/development.md) | `bun dev`, rebuild flow, custimizations|
+| [docs/architecture.md](docs/architecture.md) | Architecture overview |
+| [docs/fork-changes.md](docs/fork-changes.md) | List of changes from upstream opencode |
+| [docs/release.md](docs/release.md) | Releasing the Windows binary |
+| [docs/maintainer-sync.md](docs/maintainer-sync.md) | Pulling updates from `anomalyco/opencode` |
+| [docs/upstream-readme/](docs/upstream-readme/) | Original OpenCode README |
 
 > **Upstream sync** (replaces GitHub's "Sync fork" button):
 > ```bash
@@ -114,4 +114,4 @@ iibcode run "explain the auth flow" -m gwdg/qwen3.6-35b-a3b  # one-shot
 
 ## License
 
-iibcode, a fork of OpenCode, remains MIT-licensed.
+iibcode, a fork of [opencode](https://github.com/anomalyco/opencode), remains MIT-licensed.

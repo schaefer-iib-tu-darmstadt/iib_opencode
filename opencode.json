@@ -96,6 +96,14 @@
             "output": 8192
           }
         },
+        "apertus-70b-instruct-2509": {
+          "name": "Apertus 70B Instruct 2509",
+          "tool_call": true,
+          "limit": {
+            "context": 65000,
+            "output": 8192
+          }
+        },
         "gemma-4-31b-it": {
           "name": "Gemma 4 31B Instruct",
           "tool_call": true,

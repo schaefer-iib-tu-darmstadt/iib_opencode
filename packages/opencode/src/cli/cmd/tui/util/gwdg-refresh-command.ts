@@ -127,12 +127,19 @@ async function run({ dialog, toast, project }: Deps): Promise<void> {
       reloadAttempted = true
     } catch {}
 
+    // iibcode: report the number actually written, not diff.newIds.length. No-tool
+    // models are probed but filtered out above, so the two counts differ — showing
+    // "Added 3" when only 1 was written (and /models then shows nothing new) is what
+    // confused us. Report added + skipped separately.
+    const addedCount = Object.keys(newEntries).length
+    const skippedCount = diff.newIds.length - addedCount
+    const skipNote = skippedCount > 0 ? `, skipped ${skippedCount} without tool calling` : ""
     const limitNote = limitUpdate.updated.length > 0 ? `, updated ${limitUpdate.updated.length} context limit(s)` : ""
     toast.show({
       variant: "success",
       message: reloadAttempted
-        ? `Added ${diff.newIds.length} model(s)${limitNote} — open /models to see them`
-        : `Added ${diff.newIds.length} model(s)${limitNote} — restart TUI to use them`,
+        ? `Added ${addedCount} model(s)${skipNote}${limitNote} — open /models to see them`
+        : `Added ${addedCount} model(s)${skipNote}${limitNote} — restart TUI to use them`,
     })
   } catch (e) {
     if (e instanceof GwdgRefresh.GwdgRefreshError) {
