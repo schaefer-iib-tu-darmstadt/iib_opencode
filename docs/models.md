@@ -1,6 +1,6 @@
 # Available models (early May 2026 — GWDG)
 
-Configured in [`../opencode.json`](../opencode.json), all under the `gwdg/` provider prefix. Ground-truthed against the live API on 2026-05-07 — re-run `bun run gwdg:refresh` to update.
+Configured in [`../opencode.json`](../opencode.json), all under the `gwdg/` provider prefix. Ground-truthed against the live API on 2026-05-07 — run `/models-refresh` in the TUI to update.
 
 For GWDG's own positioning of these models (descriptions, intended use cases, vision support, etc.), see their [model overview](https://docs.hpc.gwdg.de/services/ai-services/chat-ai/models/index.html). GWDG's official *standard recommendation* is `meta-llama-3.1-8b-instruct` for general use; iibcode picks `qwen3-coder-30b-a3b-instruct` as the default for coding-agent work.
 
@@ -47,4 +47,4 @@ $h = @{ Authorization = "Bearer $env:GWDG_API_KEY"; "Content-Type" = "applicatio
 Invoke-RestMethod -Uri "https://chat-ai.academiccloud.de/v1/models" -Method Get -Headers $h
 ```
 
-To re-sync `opencode.json` against the live API (probes tool-call support and writes the result back), run `bun run gwdg:refresh` from the repo root, or `/models-refresh` inside the TUI.
+To re-sync `opencode.json` against the live API (probes tool-call support, scrapes per-model context limits from the GWDG docs, and writes the result back), run `/models-refresh` inside the TUI.
