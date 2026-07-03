@@ -24,9 +24,43 @@ import { EventV2 } from "@/v2/event"
 import { SessionEvent } from "@/v2/session-event"
 import { Modelv2 } from "@/v2/model"
 import * as DateTime from "effect/DateTime"
+import type { SharedV3ProviderMetadata } from "@ai-sdk/provider"
 
 const DOOM_LOOP_THRESHOLD = 3
 const log = Log.create({ service: "session.processor" })
+
+// iibcode: read the rate-limit headers captured by the session.llm wrapStream
+// middleware (provider-agnostic; covers GWDG) into the message's rateLimit field.
+function extractRateLimit(metadata?: SharedV3ProviderMetadata) {
+  const headers = metadata?.ratelimit?.headers as Record<string, string | string[]> | undefined
+  if (!headers) return undefined
+
+  const parse = (key: string) => {
+    const val = headers[key]
+    if (Array.isArray(val)) return Number.parseInt(val[0], 10)
+    if (typeof val === "string") return Number.parseInt(val, 10)
+    return NaN
+  }
+
+  const result: {
+    minute?: { limit: number; remaining: number }
+    hour?: { limit: number; remaining: number }
+  } = {}
+
+  const minLimit = parse("x-ratelimit-limit-minute")
+  const minRemaining = parse("x-ratelimit-remaining-minute")
+  if (!Number.isNaN(minLimit) && !Number.isNaN(minRemaining)) {
+    result.minute = { limit: minLimit, remaining: minRemaining }
+  }
+
+  const hrLimit = parse("x-ratelimit-limit-hour")
+  const hrRemaining = parse("x-ratelimit-remaining-hour")
+  if (!Number.isNaN(hrLimit) && !Number.isNaN(hrRemaining)) {
+    result.hour = { limit: hrLimit, remaining: hrRemaining }
+  }
+
+  return Object.keys(result).length > 0 ? result : undefined
+}
 
 export type Result = "compact" | "stop" | "continue"
 
@@ -471,6 +505,10 @@ export const layer: Layer.Layer<
             ctx.assistantMessage.finish = value.finishReason
             ctx.assistantMessage.cost += usage.cost
             ctx.assistantMessage.tokens = usage.tokens
+            const rateLimit = extractRateLimit(value.providerMetadata)
+            if (rateLimit) {
+              ctx.assistantMessage.rateLimit = rateLimit
+            }
             yield* session.updatePart({
               id: PartID.ascending(),
               reason: value.finishReason,

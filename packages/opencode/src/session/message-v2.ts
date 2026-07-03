@@ -578,6 +578,22 @@ export const Assistant = Schema.Struct({
   structured: Schema.optional(Schema.Any),
   variant: Schema.optional(Schema.String),
   finish: Schema.optional(Schema.String),
+  rateLimit: Schema.optional(
+    Schema.Struct({
+      minute: Schema.optional(
+        Schema.Struct({
+          limit: NonNegativeInt,
+          remaining: NonNegativeInt,
+        }),
+      ),
+      hour: Schema.optional(
+        Schema.Struct({
+          limit: NonNegativeInt,
+          remaining: NonNegativeInt,
+        }),
+      ),
+    }),
+  ),
 })
   .annotate({ identifier: "AssistantMessage" })
   .pipe(withStatics((s) => ({ zod: zod(s) })))

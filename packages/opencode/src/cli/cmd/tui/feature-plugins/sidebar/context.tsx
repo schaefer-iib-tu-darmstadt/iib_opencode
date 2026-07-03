@@ -1,6 +1,7 @@
 import type { AssistantMessage } from "@opencode-ai/sdk/v2"
 import type { TuiPlugin, TuiPluginApi, TuiPluginModule } from "@opencode-ai/plugin/tui"
 import { createMemo } from "solid-js"
+import { registerRateLimitSlot } from "./rate-limit"
 
 const id = "internal:sidebar-context"
 
@@ -53,6 +54,7 @@ const tui: TuiPlugin = async (api) => {
       },
     },
   })
+  registerRateLimitSlot(api) // iibcode: GWDG rate-limit sidebar section (see ./rate-limit.tsx)
 }
 
 const plugin: TuiPluginModule & { id: string } = {

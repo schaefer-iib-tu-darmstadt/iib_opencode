@@ -44,6 +44,29 @@ export function delay(attempt: number, error?: MessageV2.APIError) {
         }
       }
 
+      // Check GWDG-style rate limit headers to estimate wait time
+      const getHeaderValue = (key: string) => {
+        const val = headers[key]
+        if (!val) return NaN
+        if (Array.isArray(val)) return Number.parseFloat(val[0])
+        return Number.parseFloat(val)
+      }
+
+      const minuteLimit = getHeaderValue("x-ratelimit-limit-minute")
+      const minuteRemaining = getHeaderValue("x-ratelimit-remaining-minute")
+      if (!Number.isNaN(minuteLimit) && !Number.isNaN(minuteRemaining) && minuteRemaining <= 0) {
+        // Per-minute rate limit exhausted, wait ~1 second plus small jitter
+        return cap(1000 + Math.random() * 500)
+      }
+
+      const resetHeader = headers["x-ratelimit-reset"] || headers["ratelimit-reset"]
+      if (resetHeader) {
+        const parsedMs = Number.parseFloat(Array.isArray(resetHeader) ? resetHeader[0] : resetHeader)
+        if (!Number.isNaN(parsedMs) && parsedMs > 0) {
+          return cap(parsedMs * 1000)
+        }
+      }
+
       return cap(RETRY_INITIAL_DELAY * Math.pow(RETRY_BACKOFF_FACTOR, attempt - 1))
     }
   }

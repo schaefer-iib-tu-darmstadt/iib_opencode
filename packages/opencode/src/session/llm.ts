@@ -3,6 +3,7 @@ import * as Log from "@opencode-ai/core/util/log"
 import { Context, Effect, Layer, Record } from "effect"
 import * as Stream from "effect/Stream"
 import { streamText, wrapLanguageModel, type ModelMessage, type Tool, tool, jsonSchema } from "ai"
+import type { LanguageModelV3StreamPart } from "@ai-sdk/provider"
 import { mergeDeep } from "remeda"
 import { GitLabWorkflowLanguageModel } from "gitlab-ai-provider"
 import { ProviderTransform } from "@/provider/transform"
@@ -333,6 +334,19 @@ const live: Layer.Layer<
         ? (yield* InstanceState.context).project.id
         : undefined
 
+      // Capture GWDG-style rate-limit response headers (x-ratelimit-* / ratelimit-*)
+      // so the TUI sidebar and retry backoff can use them. Provider-agnostic — unlike
+      // the copilot SDK's own capture, which only covers the github-copilot path.
+      const pickRateLimitHeaders = (h?: Record<string, string>) => {
+        if (!h) return undefined
+        const out: Record<string, string> = {}
+        for (const [k, v] of Object.entries(h)) {
+          const lower = k.toLowerCase()
+          if (lower.startsWith("x-ratelimit-") || lower.startsWith("ratelimit-")) out[lower] = v
+        }
+        return Object.keys(out).length > 0 ? out : undefined
+      }
+
       return streamText({
         onError(error) {
           l.error("stream error", {
@@ -399,6 +413,31 @@ const live: Layer.Layer<
                   args.params.prompt = ProviderTransform.message(args.params.prompt, input.model, options)
                 }
                 return args.params
+              },
+            },
+            {
+              specificationVersion: "v3" as const,
+              async wrapStream({ doStream }) {
+                const result = await doStream()
+                const rateLimitHeaders = pickRateLimitHeaders(result.response?.headers)
+                if (!rateLimitHeaders) return result
+                return {
+                  ...result,
+                  stream: result.stream.pipeThrough(
+                    new TransformStream<LanguageModelV3StreamPart, LanguageModelV3StreamPart>({
+                      transform(chunk, controller) {
+                        if (chunk.type === "finish") {
+                          controller.enqueue({
+                            ...chunk,
+                            providerMetadata: { ...chunk.providerMetadata, ratelimit: { headers: rateLimitHeaders } },
+                          })
+                          return
+                        }
+                        controller.enqueue(chunk)
+                      },
+                    }),
+                  ),
+                }
               },
             },
           ],
