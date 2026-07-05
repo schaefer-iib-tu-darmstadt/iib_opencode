@@ -426,6 +426,163 @@ export function pruneStale(
   return { removed, protectedStale }
 }
 
+// The top-level `model` key is stored as "provider/model-id"; the models map is
+// keyed by bare model id. Strip the provider prefix so pruneStale can protect the
+// active default from being removed.
+export function defaultModelId(config: Record<string, unknown>): string | undefined {
+  const m = config.model
+  if (typeof m !== "string") return undefined
+  return m.includes("/") ? m.slice(m.lastIndexOf("/") + 1) : m
+}
+
+export type SyncOutcome = {
+  cancelled: boolean
+  readyCount: number
+  added: string[]
+  removed: string[]
+  limitUpdated: string[]
+  skipped: number
+  protectedStale: string[]
+  wroteAny: boolean
+  writtenPaths: string[]
+}
+
+// The TUI-independent core of /models-refresh, shared by the in-TUI command
+// (cli/cmd/tui/util/gwdg-refresh-command.ts) and headless onboarding
+// (scripts/setup.ts). Fetches the live GWDG catalog once, diffs it against every
+// target opencode.json, probes the union of new model ids a single time, then per
+// config adds tool-capable new models, refreshes context limits, and prunes
+// decommissioned ones (never the top-level default). Rewrites only configs that
+// actually changed. `confirmProbe` (given the pending diff) gates the probing step
+// — the caller builds whatever prompt it wants and returns false to abort;
+// `onProgress` receives human-readable status lines. No process signals, toasts,
+// or dialogs live here — callers wire those up around the returned SyncOutcome.
+export async function syncCatalogToConfigs(opts: {
+  apiKey: string
+  configPaths: string[]
+  confirmProbe?: (info: { newIds: string[]; staleIds: string[]; paths: string[] }) => Promise<boolean>
+  onProgress?: (message: string) => void
+}): Promise<SyncOutcome> {
+  const { apiKey, configPaths, confirmProbe, onProgress } = opts
+  const progress = (m: string) => onProgress?.(m)
+
+  const empty = (cancelled: boolean, readyCount: number): SyncOutcome => ({
+    cancelled,
+    readyCount,
+    added: [],
+    removed: [],
+    limitUpdated: [],
+    skipped: 0,
+    protectedStale: [],
+    wroteAny: false,
+    writtenPaths: [],
+  })
+
+  progress("Fetching GWDG model catalog...")
+  const catalog = await fetchCatalog(apiKey)
+  // Best-effort scrape of per-model context windows (API omits them); [] on failure.
+  const limits = await fetchContextLimits()
+
+  // Load every target config and diff each against the live catalog.
+  type TargetState = {
+    path: string
+    config: Record<string, unknown>
+    models: Record<string, unknown>
+    newIds: string[]
+    staleIds: string[]
+    defaultModel?: string
+  }
+  const states: TargetState[] = []
+  let readyCount = 0
+  for (const configPath of configPaths) {
+    const config = await readConfig(configPath)
+    const provider = (config.provider ??= {} as Record<string, unknown>) as Record<
+      string,
+      { models?: Record<string, unknown> }
+    >
+    const gwdg = (provider.gwdg ??= {})
+    const models = (gwdg.models ??= {}) as Record<string, unknown>
+    const diff = diffCatalog(models, catalog)
+    readyCount = diff.readyCount
+    states.push({
+      path: configPath,
+      config,
+      models,
+      newIds: diff.newIds,
+      staleIds: diff.staleIds,
+      defaultModel: defaultModelId(config),
+    })
+  }
+
+  // Probe each new model at most once, even if it's new to several configs.
+  const newIdsUnion = [...new Set(states.flatMap((s) => s.newIds))].sort()
+  const staleUnion = [...new Set(states.flatMap((s) => s.staleIds))].sort()
+
+  if (newIdsUnion.length > 0 && confirmProbe) {
+    const ok = await confirmProbe({ newIds: newIdsUnion, staleIds: staleUnion, paths: configPaths })
+    if (!ok) return empty(true, readyCount)
+  }
+
+  const newEntries: Record<string, ConfigModelEntry> = {}
+  for (let i = 0; i < newIdsUnion.length; i++) {
+    const id = newIdsUnion[i]
+    progress(`Probing ${i + 1}/${newIdsUnion.length}: ${id}`)
+    const model = catalog.data.find((m) => m.id === id)
+    if (!model) continue
+    const probe = await probeToolCall(id, apiKey)
+    const { entry } = buildEntry(model, probe, limits)
+    // Only keep tool-capable models. Models without tool calling can't drive the
+    // agentic loop (read/edit/bash), so they'd only clutter /models.
+    if (entry.tool_call) newEntries[id] = entry
+    if (i < newIdsUnion.length - 1) await sleep(PROBE_GAP_MS)
+  }
+
+  // Apply to every target: add its new tool-capable models, refresh context limits,
+  // prune models GWDG dropped. Only rewrite a config that actually changed
+  // (writeConfig reserializes the whole file, so skip no-ops).
+  const addedSet = new Set<string>()
+  const removedSet = new Set<string>()
+  const protectedSet = new Set<string>()
+  const limitSet = new Set<string>()
+  const writtenPaths: string[] = []
+  for (const s of states) {
+    let addedHere = 0
+    for (const id of s.newIds) {
+      if (newEntries[id]) {
+        s.models[id] = newEntries[id]
+        addedSet.add(id)
+        addedHere++
+      }
+    }
+    const limitUpdate = applyContextLimits(
+      s.models as Record<string, { limit?: { context?: number; output?: number } }>,
+      catalog,
+      limits,
+    )
+    limitUpdate.updated.forEach((id) => limitSet.add(id))
+    const prune = pruneStale(s.models, s.staleIds, s.defaultModel)
+    prune.removed.forEach((id) => removedSet.add(id))
+    prune.protectedStale.forEach((id) => protectedSet.add(id))
+
+    if (addedHere > 0 || limitUpdate.updated.length > 0 || prune.removed.length > 0) {
+      await writeConfig(s.path, s.config)
+      writtenPaths.push(s.path)
+    }
+  }
+
+  return {
+    cancelled: false,
+    readyCount,
+    added: [...addedSet],
+    removed: [...removedSet],
+    limitUpdated: [...limitSet],
+    skipped: newIdsUnion.length - addedSet.size,
+    protectedStale: [...protectedSet],
+    wroteAny: writtenPaths.length > 0,
+    writtenPaths,
+  }
+}
+
 export type KeyCheck = {
   valid: boolean
   status?: number

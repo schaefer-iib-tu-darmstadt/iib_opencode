@@ -25,12 +25,12 @@ Everything not listed below is untouched upstream code.
 | `README.md` | iibcode quickstart (upstream's README moved to `docs/upstream-readme/`) |
 | `docs/*.md`, `docs/images/`, `docs/upstream-readme/` | All fork documentation + the archived upstream README and its 21 translations |
 | `ROADMAP.md`, `CLAUDE.md`, `.gitattributes` | Roadmap, agent context, `merge=ours` markers |
-| `scripts/setup.ts` | One-command onboarding: `bun run setup` |
+| `scripts/setup.ts` | One-command onboarding: `bun run setup`. Validates both an already-set and a freshly pasted `GWDG_API_KEY` against GWDG (a stale existing key no longer slips through), then runs a headless one-shot catalog sync (step 6, `syncCatalogToConfigs`) over the project-local + global `opencode.json` so the first launch shows live models. |
 | `scripts/build-iibcode.ts` | Builds `dist/iibcode[.exe]`: `bun run iibcode:build` |
 | `scripts/install-global-config.ts` | Syncs `opencode.json` → `~/.config/opencode/`: `bun run setup:global-config` |
 | `packages/opencode/src/cli/brand.ts` | Brand strings (`iibcode` / `iib`) used by the terminal-title patch in `app.tsx` |
-| `packages/opencode/src/cli/cmd/tui/util/gwdg-refresh.ts` | `/models-refresh` logic: fetch GWDG catalog, probe tool-call support by HTTP status (2xx accept / 4xx reject / retry transient 5xx·429·408), scrape context windows from the GWDG docs, write `opencode.json` |
-| `packages/opencode/src/cli/cmd/tui/util/gwdg-refresh-command.ts` | The `/models-refresh` TUI command handler (kept out of `app.tsx` on purpose) |
+| `packages/opencode/src/cli/cmd/tui/util/gwdg-refresh.ts` | `/models-refresh` logic: fetch GWDG catalog, probe tool-call support by HTTP status (2xx accept / 4xx reject / retry transient 5xx·429·408), scrape context windows from the GWDG docs, write `opencode.json`. Exposes `syncCatalogToConfigs()` — the TUI-independent core (fetch → diff → probe once → apply/prune/write) shared by the TUI command and `scripts/setup.ts`; takes `confirmProbe`/`onProgress` hooks so callers supply their own dialog/toast/console. |
+| `packages/opencode/src/cli/cmd/tui/util/gwdg-refresh-command.ts` | The `/models-refresh` TUI command handler (kept out of `app.tsx` on purpose); a thin shell over `syncCatalogToConfigs()` — confirm dialog, progress toasts, SIGUSR2 reload |
 | `packages/opencode/src/cli/cmd/tui/feature-plugins/sidebar/rate-limit.tsx` | The "Rate limit" sidebar section + its slot registration |
 
 ## Modified upstream files (the merge-conflict surface)

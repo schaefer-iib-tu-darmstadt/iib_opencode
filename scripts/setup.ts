@@ -10,8 +10,12 @@
 //   2. bun run iibcode:build               (compiles dist/iibcode[.exe])
 //   3. copy the binary onto PATH           (~/.bun/bin/iibcode[.exe])
 //   4. bun run setup:global-config         (gwdg provider visible from any dir)
-//   5. store GWDG_API_KEY as a user env var (always prompted, validated against
-//      GWDG before storing; blank keeps the current key; never written to the repo)
+//   5. store GWDG_API_KEY as a user env var (always prompted; an already-set key is
+//      validated against GWDG too, so a stale one is caught instead of silently
+//      kept; a pasted key is validated before storing; never written to the repo)
+//   6. sync the model catalog once (headless /models-refresh against BOTH the
+//      project-local and global opencode.json, so the first `iibcode` launch lists
+//      the live GWDG models instead of the committed snapshot; best-effort)
 //
 // What this CANNOT do for you (by design, not laziness):
 //   - obtain a GWDG API key — that's per person; have it ready before running.
@@ -21,7 +25,8 @@
 // Usage:  bun run setup
 //
 // Safe to re-run: install/build/copy/global-config are idempotent; the key step
-// always prompts (blank keeps the current key) and validates before storing.
+// always prompts (blank keeps a *validated* current key) and validates before
+// storing; the catalog sync is a best-effort, non-fatal mirror of GWDG.
 //
 
 import { $ } from "bun"
@@ -30,7 +35,11 @@ import os from "os"
 import fs from "fs"
 // Reuse the fork's GWDG key check (GET /v1/models, classified) so setup can retry
 // on a bad key. gwdg-refresh.ts imports only node:fs/os/path — safe to run via Bun.
-import { validateApiKey } from "../packages/opencode/src/cli/cmd/tui/util/gwdg-refresh"
+import {
+  validateApiKey,
+  resolveConfigTargets,
+  syncCatalogToConfigs,
+} from "../packages/opencode/src/cli/cmd/tui/util/gwdg-refresh"
 
 const repoRoot = path.resolve(import.meta.dirname, "..")
 const isWin = process.platform === "win32"
@@ -40,7 +49,7 @@ const exeExt = isWin ? ".exe" : ""
 $.throws(false)
 
 function step(n: number, msg: string) {
-  console.log(`\n[setup] (${n}/5) ${msg}`)
+  console.log(`\n[setup] (${n}/6) ${msg}`)
 }
 
 // --- 1. install dependencies ------------------------------------------------
@@ -105,10 +114,40 @@ step(4, "bun run setup:global-config")
 }
 
 // --- 5. store the API key ---------------------------------------------------
+// The validated key (a freshly stored one, or a confirmed-good existing one) is
+// handed to step 6 for the catalog sync — after setx it's NOT visible in this
+// process's env, so we must carry it in-memory. Stays undefined if the user
+// defers the key or keeps a known-bad one, which makes step 6 skip.
+let validatedKey: string | undefined
 step(5, "store GWDG_API_KEY")
 {
   const existing = (process.env.GWDG_API_KEY ?? "").trim()
-  if (existing) console.log(`[setup] A GWDG_API_KEY is already set (…${existing.slice(-4)}).`)
+
+  // Unlike before, an already-set key is now tested against GWDG up front — a
+  // stale/expired key used to slip through silently when the user left the prompt
+  // blank ("it's already set"). `network` (GWDG unreachable) is treated as
+  // "unconfirmed", not invalid: we keep the key but say we couldn't verify it.
+  let existingValid = false
+  let existingUnverified = false
+  if (existing) {
+    console.log(`[setup] A GWDG_API_KEY is already set (…${existing.slice(-4)}). Testing it against GWDG…`)
+    const check = await validateApiKey(existing)
+    if (check.valid) {
+      existingValid = true
+      validatedKey = existing
+      console.log("[setup] Current key is valid.")
+    } else if (check.reason === "unauthorized") {
+      console.warn(`[setup] Current key was REJECTED by GWDG (HTTP ${check.status}). Paste a fresh one below.`)
+    } else if (check.reason === "server") {
+      existingUnverified = true
+      validatedKey = existing // couldn't confirm, but let step 6 try — it's best-effort
+      console.warn(`[setup] GWDG returned HTTP ${check.status}; couldn't verify the current key. Assuming it's fine.`)
+    } else {
+      existingUnverified = true
+      validatedKey = existing // network blip: keep the key and let step 6 try anyway
+      console.warn("[setup] Couldn't reach GWDG to verify the current key (network/timeout). Assuming it's fine.")
+    }
+  }
 
   // Persist a validated key. Windows: setx -> User env (HKCU\Environment), same
   // target as [Environment]::SetEnvironmentVariable(..., "User"). Else: rewrite
@@ -148,18 +187,25 @@ step(5, "store GWDG_API_KEY")
     )
   }
 
-  // Always prompt (even if a key is set — it may be stale, which was the whole
-  // problem). Blank keeps the current key (or defers if none). A pasted key is
-  // tested against GWDG before storing; on any failure we re-prompt, with blank
-  // as the escape hatch.
+  // Always prompt, even with a key set — it may be stale. The prompt text and what
+  // "blank" does now depend on the up-front check above: blank keeps a validated
+  // (or unverifiable) current key, warns when it keeps a known-bad one, and defers
+  // when there's none. A pasted key is tested before storing; on failure we
+  // re-prompt, with blank as the escape hatch.
+  const existingBad = !!existing && !existingValid && !existingUnverified
   while (true) {
-    const promptMsg = existing
-      ? "[setup] Paste your GWDG_API_KEY (blank = keep current key):"
-      : "[setup] Paste your GWDG_API_KEY (blank = set it later):"
+    const promptMsg = existingValid
+      ? "[setup] Paste a GWDG_API_KEY to replace it (blank = keep current validated key):"
+      : existingUnverified
+        ? "[setup] Paste a GWDG_API_KEY (blank = keep current unverified key):"
+        : existing
+          ? "[setup] Paste a valid GWDG_API_KEY (blank = keep the rejected key anyway):"
+          : "[setup] Paste your GWDG_API_KEY (blank = set it later):"
     const key = (prompt(promptMsg) ?? "").trim()
 
     if (!key) {
-      if (existing) console.log("[setup] Keeping the current GWDG_API_KEY.")
+      if (existingBad) console.warn("[setup] Keeping the current GWDG_API_KEY, but GWDG rejected it — iibcode will fail until it's fixed.")
+      else if (existing) console.log("[setup] Keeping the current GWDG_API_KEY.")
       else printManualHint()
       break
     }
@@ -168,6 +214,7 @@ step(5, "store GWDG_API_KEY")
     const check = await validateApiKey(key)
     if (check.valid) {
       await storeKey(key)
+      validatedKey = key
       break
     }
     if (check.reason === "unauthorized")
@@ -177,8 +224,52 @@ step(5, "store GWDG_API_KEY")
   }
 }
 
+// --- 6. sync the model catalog once -----------------------------------------
+// Run the headless equivalent of /models-refresh against BOTH the project-local
+// (repo) and global opencode.json so the first `iibcode` launch shows the live
+// GWDG catalog, not the committed snapshot (which drifts as GWDG adds/decommissions
+// models). Uses the in-memory validatedKey — after setx the key isn't in this
+// process's env yet. Entirely best-effort: any failure (offline, GWDG 5xx, docs
+// scrape) is a warning, never a setup failure. NOTE: editing the repo's tracked
+// opencode.json leaves the working tree dirty — that's intended (the user asked to
+// sync both configs); the closing text flags it.
+step(6, "sync GWDG model catalog")
+let catalogSynced = false
+if (!validatedKey) {
+  console.log("[setup] No validated key available — skipping catalog sync.")
+  console.log("[setup]   Run /models-refresh inside the TUI once your key works.")
+} else {
+  try {
+    const targets = await resolveConfigTargets(repoRoot)
+    if (targets.paths.length === 0) {
+      console.warn(`[setup] No opencode.json found (project: ${targets.projectDir}, global: ${targets.globalPath}) — skipping sync.`)
+    } else {
+      const result = await syncCatalogToConfigs({
+        apiKey: validatedKey,
+        configPaths: targets.paths,
+        // Headless: no confirmation prompt — always probe the new models.
+        confirmProbe: async () => true,
+        onProgress: (m) => console.log(`[setup]   ${m}`),
+      })
+      catalogSynced = result.wroteAny
+      const parts = [`Added ${result.added.length}`]
+      if (result.removed.length > 0) parts.push(`removed ${result.removed.length}`)
+      if (result.limitUpdated.length > 0) parts.push(`updated ${result.limitUpdated.length} context limit(s)`)
+      if (result.skipped > 0) parts.push(`skipped ${result.skipped} without tool calling`)
+      if (result.wroteAny)
+        console.log(`[setup] ${parts.join(", ")} across ${targets.paths.length} config(s).`)
+      else console.log(`[setup] All ${result.readyCount} GWDG models already match ${targets.paths.length} config(s).`)
+    }
+  } catch (e) {
+    console.warn(`[setup] Catalog sync skipped (${e instanceof Error ? e.message : String(e)}).`)
+    console.warn("[setup]   Not fatal — run /models-refresh inside the TUI later.")
+  }
+}
+
 // --- done -------------------------------------------------------------------
 console.log("\n[setup] Done. Next:")
 console.log("[setup]   1. Open a NEW terminal (so GWDG_API_KEY is visible).")
 console.log("[setup]   2. cd into any project folder.")
 console.log("[setup]   3. Run:  iibcode")
+if (catalogSynced)
+  console.log("[setup]   (model catalog was synced — `git diff opencode.json` may show changes; commit or discard as you like.)")
