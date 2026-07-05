@@ -228,6 +228,33 @@ export async function resolveConfigPath(startDir: string): Promise<ConfigTarget>
   return { path: null, projectDir: startDir, globalPath }
 }
 
+export type ConfigTargets = { paths: string[]; projectDir: string; globalPath: string }
+
+// Like resolveConfigPath, but returns EVERY opencode.json /models-refresh should
+// sync — the nearest project-local one (if any) AND the global user config (if it
+// exists) — deduplicated. /models-refresh is a plain "mirror the current GWDG
+// catalog" action, so it should keep both configs in sync rather than editing
+// only whichever one happens to be in effect. `paths` is empty when neither
+// exists; `projectDir`/`globalPath` are returned so the caller can report where
+// it looked.
+export async function resolveConfigTargets(startDir: string): Promise<ConfigTargets> {
+  const globalPath = globalConfigPath()
+  const paths: string[] = []
+
+  const local = await findOpencodeJson(startDir)
+  if (local) paths.push(path.resolve(local))
+
+  try {
+    const stat = await fs.stat(globalPath)
+    if (stat.isFile()) {
+      const resolved = path.resolve(globalPath)
+      if (!paths.includes(resolved)) paths.push(resolved)
+    }
+  } catch {}
+
+  return { paths, projectDir: startDir, globalPath }
+}
+
 export async function readConfig(filepath: string): Promise<Record<string, unknown>> {
   const text = await fs.readFile(filepath, "utf8")
   return JSON.parse(text) as Record<string, unknown>
@@ -371,6 +398,61 @@ export function diffCatalog(
   const staleIds = [...existingIds].filter((id) => !catalogIds.has(id)).sort()
 
   return { newIds, staleIds, readyCount: ready.length }
+}
+
+// Delete every stale model id (in the config but no longer in the ready catalog)
+// from `models`, mutating it in place. Returns the ids actually removed. `protect`
+// (the config's top-level default model id) is never removed: pruning the active
+// default would leave `model` pointing at a missing entry and break TUI startup —
+// so it's skipped here and reported by the caller instead. This is what makes
+// /models-refresh a true sync: models GWDG has decommissioned drop out of
+// opencode.json automatically rather than lingering as stale entries.
+export function pruneStale(
+  models: Record<string, unknown>,
+  staleIds: string[],
+  protect?: string,
+): { removed: string[]; protectedStale: string[] } {
+  const removed: string[] = []
+  const protectedStale: string[] = []
+  for (const id of staleIds) {
+    if (!(id in models)) continue
+    if (protect && id === protect) {
+      protectedStale.push(id)
+      continue
+    }
+    delete models[id]
+    removed.push(id)
+  }
+  return { removed, protectedStale }
+}
+
+export type KeyCheck = {
+  valid: boolean
+  status?: number
+  reason: "ok" | "unauthorized" | "network" | "server"
+}
+
+// Lightweight GWDG API-key check for onboarding: GET /v1/models with the key and
+// classify the outcome instead of throwing (unlike fetchCatalog), so setup.ts can
+// drive a "retry until valid" prompt loop. 2xx => ok; 401/403 => the key is wrong;
+// any other HTTP status => server-side issue; a network/timeout exception =>
+// unreachable (GWDG down / offline).
+export async function validateApiKey(apiKey: string): Promise<KeyCheck> {
+  try {
+    const res = await fetch(`${GWDG_BASE_URL}/models`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      signal: AbortSignal.timeout(CATALOG_TIMEOUT_MS),
+    })
+    if (res.ok) return { valid: true, status: res.status, reason: "ok" }
+    if (res.status === 401 || res.status === 403) return { valid: false, status: res.status, reason: "unauthorized" }
+    return { valid: false, status: res.status, reason: "server" }
+  } catch {
+    return { valid: false, reason: "network" }
+  }
 }
 
 export function sleep(ms: number): Promise<void> {

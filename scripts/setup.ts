@@ -10,7 +10,8 @@
 //   2. bun run iibcode:build               (compiles dist/iibcode[.exe])
 //   3. copy the binary onto PATH           (~/.bun/bin/iibcode[.exe])
 //   4. bun run setup:global-config         (gwdg provider visible from any dir)
-//   5. store GWDG_API_KEY as a user env var (prompted; never written to the repo)
+//   5. store GWDG_API_KEY as a user env var (always prompted, validated against
+//      GWDG before storing; blank keeps the current key; never written to the repo)
 //
 // What this CANNOT do for you (by design, not laziness):
 //   - obtain a GWDG API key — that's per person; have it ready before running.
@@ -20,13 +21,16 @@
 // Usage:  bun run setup
 //
 // Safe to re-run: install/build/copy/global-config are idempotent; the key step
-// is skipped if GWDG_API_KEY is already set.
+// always prompts (blank keeps the current key) and validates before storing.
 //
 
 import { $ } from "bun"
 import path from "path"
 import os from "os"
 import fs from "fs"
+// Reuse the fork's GWDG key check (GET /v1/models, classified) so setup can retry
+// on a bad key. gwdg-refresh.ts imports only node:fs/os/path — safe to run via Bun.
+import { validateApiKey } from "../packages/opencode/src/cli/cmd/tui/util/gwdg-refresh"
 
 const repoRoot = path.resolve(import.meta.dirname, "..")
 const isWin = process.platform === "win32"
@@ -102,40 +106,74 @@ step(4, "bun run setup:global-config")
 
 // --- 5. store the API key ---------------------------------------------------
 step(5, "store GWDG_API_KEY")
-if (process.env.GWDG_API_KEY) {
-  console.log("[setup] GWDG_API_KEY is already set in this environment — skipping.")
-} else {
-  const key = (prompt("[setup] Paste your GWDG_API_KEY (or leave blank to set it later):") ?? "").trim()
-  if (!key) {
-    console.log("[setup] Skipped. Set it later, then open a fresh shell:")
-    console.log(
-      isWin
-        ? `[setup]   [Environment]::SetEnvironmentVariable("GWDG_API_KEY", "your-key", "User")`
-        : `[setup]   echo 'export GWDG_API_KEY="your-key"' >> ~/.zshrc   # or ~/.bashrc`,
-    )
-  } else if (isWin) {
-    // setx persists to the User environment (HKCU\Environment), same target as
-    // [Environment]::SetEnvironmentVariable(..., "User"). It does not affect the
-    // current process — a new shell is required.
-    const r = await $`cmd /c setx GWDG_API_KEY ${key}`.quiet()
-    if (r.exitCode === 0) console.log("[setup] GWDG_API_KEY saved to your User environment.")
-    else console.error("[setup] Could not set the env var automatically — set it manually (see README).")
-  } else {
-    // Append an export line to the login shell's rc file, unless it already
-    // references the key (avoid piling up duplicate exports on re-runs).
+{
+  const existing = (process.env.GWDG_API_KEY ?? "").trim()
+  if (existing) console.log(`[setup] A GWDG_API_KEY is already set (…${existing.slice(-4)}).`)
+
+  // Persist a validated key. Windows: setx -> User env (HKCU\Environment), same
+  // target as [Environment]::SetEnvironmentVariable(..., "User"). Else: rewrite
+  // the export line in the login shell's rc (updating, not just appending, so a
+  // re-run replaces a stale key instead of piling up duplicates). Neither affects
+  // the current process — a fresh shell is required.
+  async function storeKey(key: string): Promise<void> {
+    if (isWin) {
+      const r = await $`cmd /c setx GWDG_API_KEY ${key}`.quiet()
+      if (r.exitCode === 0) console.log("[setup] GWDG_API_KEY saved to your User environment.")
+      else console.error("[setup] Could not set the env var automatically — set it manually (see README).")
+      return
+    }
     const shell = process.env.SHELL ?? ""
     const rc = shell.includes("zsh")
       ? path.join(os.homedir(), ".zshrc")
       : shell.includes("bash")
         ? path.join(os.homedir(), ".bashrc")
         : path.join(os.homedir(), ".profile")
-    const existing = fs.existsSync(rc) ? fs.readFileSync(rc, "utf8") : ""
-    if (existing.includes("GWDG_API_KEY")) {
-      console.log(`[setup] ${rc} already references GWDG_API_KEY — leaving it untouched.`)
+    const contents = fs.existsSync(rc) ? fs.readFileSync(rc, "utf8") : ""
+    const exportLine = `export GWDG_API_KEY="${key}"`
+    if (/^export GWDG_API_KEY=.*$/m.test(contents)) {
+      fs.writeFileSync(rc, contents.replace(/^export GWDG_API_KEY=.*$/m, exportLine))
+      console.log(`[setup] Updated GWDG_API_KEY in ${rc}.`)
     } else {
-      fs.appendFileSync(rc, `\nexport GWDG_API_KEY="${key}"\n`)
+      fs.appendFileSync(rc, `\n${exportLine}\n`)
       console.log(`[setup] Added GWDG_API_KEY to ${rc}.`)
     }
+  }
+
+  function printManualHint(): void {
+    console.log("[setup] Set it later, then open a fresh shell:")
+    console.log(
+      isWin
+        ? `[setup]   [Environment]::SetEnvironmentVariable("GWDG_API_KEY", "your-key", "User")`
+        : `[setup]   echo 'export GWDG_API_KEY="your-key"' >> ~/.zshrc   # or ~/.bashrc`,
+    )
+  }
+
+  // Always prompt (even if a key is set — it may be stale, which was the whole
+  // problem). Blank keeps the current key (or defers if none). A pasted key is
+  // tested against GWDG before storing; on any failure we re-prompt, with blank
+  // as the escape hatch.
+  while (true) {
+    const promptMsg = existing
+      ? "[setup] Paste your GWDG_API_KEY (blank = keep current key):"
+      : "[setup] Paste your GWDG_API_KEY (blank = set it later):"
+    const key = (prompt(promptMsg) ?? "").trim()
+
+    if (!key) {
+      if (existing) console.log("[setup] Keeping the current GWDG_API_KEY.")
+      else printManualHint()
+      break
+    }
+
+    console.log("[setup] Testing the key against GWDG /v1/models…")
+    const check = await validateApiKey(key)
+    if (check.valid) {
+      await storeKey(key)
+      break
+    }
+    if (check.reason === "unauthorized")
+      console.error(`[setup] Key rejected by GWDG (HTTP ${check.status}). Check it and try again.`)
+    else if (check.reason === "server") console.error(`[setup] GWDG returned HTTP ${check.status}. Try again.`)
+    else console.error("[setup] Couldn't reach GWDG (network/timeout). Try again, or leave blank to skip for now.")
   }
 }
 
